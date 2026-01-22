@@ -12,6 +12,191 @@ define('GITHUB_CONFIG_FILE', __DIR__ . '/.github-config.json');
 if (!is_dir(PID_DIR)) mkdir(PID_DIR, 0755, true);
 if (!is_dir(LOG_DIR)) mkdir(LOG_DIR, 0755, true);
 
+// Internationalization (i18n) - Language support
+$translations = [
+    'en' => [
+        'site_name' => 'Application Deployment Hub',
+        'password' => 'Password',
+        'enter_password' => 'Enter password',
+        'login' => 'Login',
+        'logout' => 'Logout',
+        'incorrect_password' => 'Incorrect password',
+
+        // Header
+        'running' => 'running',
+        'ports' => 'Ports',
+        'stop_all' => 'Stop All',
+        'open_ports' => 'Open Ports',
+        'view_open_ports' => 'View open ports',
+        'stop_all_services' => 'Stop all services',
+
+        // Projects
+        'no_projects' => 'No projects available.',
+        'projects_available' => 'project(s) available',
+        'frontend_project' => 'Frontend Project',
+        'backend_project' => 'Backend Project',
+        'open' => 'Open',
+        'start' => 'Start',
+        'stop' => 'Stop',
+        'logs' => 'Logs',
+        'open_on_github' => 'Open on GitHub',
+
+        // Modal
+        'executing' => 'Executing...',
+        'close_and_update' => 'Close and update',
+        'close' => 'Close',
+        'update' => 'Update',
+
+        // Ports Modal
+        'port' => 'Port',
+        'project' => 'Project',
+        'application' => 'Application',
+        'type' => 'Type',
+        'action' => 'Action',
+        'kill' => 'Kill',
+        'no_open_ports' => 'No open ports at this time',
+        'terminate_process' => 'Terminate process',
+
+        // Messages
+        'starting_service' => 'Starting service...',
+        'stopping_service' => 'Stopping service...',
+        'stopping_all_services' => 'Stopping all services...',
+        'loading_logs' => 'Loading logs...',
+        'updating_repository' => 'Updating repository...',
+        'service_started' => 'Service started successfully',
+        'service_starting' => 'Service starting',
+        'service_started_check' => 'Service started (check logs)',
+        'service_stopped' => 'Service stopped',
+        'services_stopped' => 'Services stopped',
+        'repository_updated' => 'Repository updated',
+        'connection_error' => 'Connection error',
+        'error' => 'Error',
+        'success' => 'Success',
+        'stopped_services' => 'Stopped',
+        'ports_closed' => 'Ports closed',
+        'no_running_services' => 'There were no running services or ports',
+        'error_loading_ports' => 'Error loading ports',
+        'stop_all_confirm' => 'Stop all running services?',
+        'kill_port_confirm' => 'Kill process on port',
+        'process_terminated' => 'Process(es) terminated on port',
+        'no_process_on_port' => 'No process using port',
+        'no_logs_available' => 'No logs available',
+        'project_not_found' => 'Project not found',
+        'invalid_port' => 'Invalid port',
+        'not_git_repo' => 'Not a git repository',
+        'no_remote_configured' => 'No remote repository configured',
+        'no_startup_script' => 'No startup script configured',
+        'backend_no_desc' => 'Backend project without description.',
+        'running_indicator' => 'Running'
+    ],
+    'es' => [
+        'site_name' => 'Centro de Despliegue de Aplicaciones',
+        'password' => 'Contraseña',
+        'enter_password' => 'Introduce la contraseña',
+        'login' => 'Acceder',
+        'logout' => 'Cerrar sesión',
+        'incorrect_password' => 'Contraseña incorrecta',
+
+        // Header
+        'running' => 'en ejecución',
+        'ports' => 'Puertos',
+        'stop_all' => 'Detener Todo',
+        'open_ports' => 'Puertos Abiertos',
+        'view_open_ports' => 'Ver puertos abiertos',
+        'stop_all_services' => 'Detener todos los servicios',
+
+        // Projects
+        'no_projects' => 'No hay proyectos disponibles.',
+        'projects_available' => 'proyecto(s) disponible(s)',
+        'frontend_project' => 'Proyecto Frontend',
+        'backend_project' => 'Proyecto Backend',
+        'open' => 'Abrir',
+        'start' => 'Iniciar',
+        'stop' => 'Detener',
+        'logs' => 'Logs',
+        'open_on_github' => 'Abrir en GitHub',
+
+        // Modal
+        'executing' => 'Ejecutando...',
+        'close_and_update' => 'Cerrar y actualizar',
+        'close' => 'Cerrar',
+        'update' => 'Actualizar',
+
+        // Ports Modal
+        'port' => 'Puerto',
+        'project' => 'Proyecto',
+        'application' => 'Aplicación',
+        'type' => 'Tipo',
+        'action' => 'Acción',
+        'kill' => 'Kill',
+        'no_open_ports' => 'No hay puertos abiertos en este momento',
+        'terminate_process' => 'Terminar proceso',
+
+        // Messages
+        'starting_service' => 'Iniciando servicio...',
+        'stopping_service' => 'Deteniendo servicio...',
+        'stopping_all_services' => 'Deteniendo todos los servicios...',
+        'loading_logs' => 'Cargando logs...',
+        'updating_repository' => 'Actualizando repositorio...',
+        'service_started' => 'Servicio iniciado correctamente',
+        'service_starting' => 'Servicio iniciándose',
+        'service_started_check' => 'Servicio iniciado (verificar logs)',
+        'service_stopped' => 'Servicio detenido',
+        'services_stopped' => 'Servicios detenidos',
+        'repository_updated' => 'Repositorio actualizado',
+        'connection_error' => 'Error de conexión',
+        'error' => 'Error',
+        'success' => 'Éxito',
+        'stopped_services' => 'Detenidos',
+        'ports_closed' => 'Puertos cerrados',
+        'no_running_services' => 'No había servicios ni puertos en ejecución',
+        'error_loading_ports' => 'Error al cargar puertos',
+        'stop_all_confirm' => '¿Detener todos los servicios en ejecución?',
+        'kill_port_confirm' => '¿Terminar el proceso en el puerto',
+        'process_terminated' => 'Proceso(s) terminado(s) en puerto',
+        'no_process_on_port' => 'No hay proceso usando el puerto',
+        'no_logs_available' => 'No hay logs disponibles',
+        'project_not_found' => 'Proyecto no encontrado',
+        'invalid_port' => 'Puerto inválido',
+        'not_git_repo' => 'No es un repositorio git',
+        'no_remote_configured' => 'No hay repositorio remoto configurado',
+        'no_startup_script' => 'No hay script de inicio configurado',
+        'backend_no_desc' => 'Proyecto backend sin descripción.',
+        'running_indicator' => 'En ejecución'
+    ]
+];
+
+// Get current language
+function getCurrentLanguage() {
+    if (isset($_SESSION['language'])) {
+        return $_SESSION['language'];
+    }
+    // Default to browser language if available
+    $browserLang = isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : 'en';
+    return in_array($browserLang, ['en', 'es']) ? $browserLang : 'en';
+}
+
+// Set language
+function setLanguage($lang) {
+    if (in_array($lang, ['en', 'es'])) {
+        $_SESSION['language'] = $lang;
+    }
+}
+
+// Translation helper function
+function __($key) {
+    global $translations;
+    $lang = getCurrentLanguage();
+    return $translations[$lang][$key] ?? $key;
+}
+
+// Handle language change
+if (isset($_GET['lang']) && in_array($_GET['lang'], ['en', 'es'])) {
+    setLanguage($_GET['lang']);
+    header('Location: index.php');
+    exit;
+}
+
 // Load GitHub configuration
 function loadGithubConfig() {
     if (file_exists(GITHUB_CONFIG_FILE)) {
@@ -49,7 +234,7 @@ function getGitRepoUrl($projectPath) {
 // Execute git fetch and pull with authentication
 function gitPull($projectPath) {
     if (!is_dir($projectPath . '/.git')) {
-        return ['success' => false, 'message' => 'Not a git repository'];
+        return ['success' => false, 'message' => __('not_git_repo')];
     }
 
     $config = loadGithubConfig();
@@ -60,7 +245,7 @@ function gitPull($projectPath) {
     $repoUrl = trim($repoUrl);
 
     if (empty($repoUrl)) {
-        return ['success' => false, 'message' => 'No remote repository configured'];
+        return ['success' => false, 'message' => __('no_remote_configured')];
     }
 
     // Configure credentials temporarily if we have token
@@ -105,7 +290,7 @@ function gitPull($projectPath) {
 
     return [
         'success' => true,
-        'message' => 'Repository updated',
+        'message' => __('repository_updated'),
         'output' => implode("\n", $output)
     ];
 }
@@ -482,7 +667,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-script' && isAuthenticate
     $infoFile = $projectPath . '/.project-info.json';
 
     if (!is_dir($projectPath) || !file_exists($infoFile)) {
-        echo json_encode(['success' => false, 'message' => 'Project not found']);
+        echo json_encode(['success' => false, 'message' => __('project_not_found')]);
         exit;
     }
 
@@ -495,7 +680,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-script' && isAuthenticate
 
     // Validate that at least one script is configured
     if (!$hasMultipleScripts && !$startScript && $scriptType !== 'php-server') {
-        echo json_encode(['success' => false, 'message' => 'No startup script configured']);
+        echo json_encode(['success' => false, 'message' => __('no_startup_script')]);
         exit;
     }
 
@@ -744,9 +929,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-script' && isAuthenticate
 
     $isRunning = isServiceRunning($project);
 
-    $message = $isRunning ? 'Service started successfully' : 'Service started (check logs)';
+    $message = $isRunning ? __('service_started') : __('service_started_check');
     if (!empty($conflictingServices)) {
-        $message .= '. Se detuvo: ' . implode(', ', $conflictingServices);
+        $message .= '. ' . __('stopped_services') . ': ' . implode(', ', $conflictingServices);
     }
 
     echo json_encode([
@@ -767,9 +952,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'stop-service' && isAuthentica
     $project = basename($project);
 
     if (stopService($project)) {
-        echo json_encode(['success' => true, 'message' => 'Service stopped']);
+        echo json_encode(['success' => true, 'message' => __('service_stopped')]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Error stopping service']);
+        echo json_encode(['success' => false, 'message' => __('error')]);
     }
     exit;
 }
@@ -843,14 +1028,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'stop-all' && isAuthenticated(
     // Prepare response message
     $message = '';
     if (count($stopped) > 0) {
-        $message .= 'Services stopped: ' . implode(', ', $stopped);
+        $message .= __('stopped_services') . ': ' . implode(', ', $stopped);
     }
     if (count($portsKilled) > 0) {
         if (!empty($message)) $message .= '. ';
-        $message .= 'Ports cerrados: ' . implode(', ', $portsKilled);
+        $message .= __('ports_closed') . ': ' . implode(', ', $portsKilled);
     }
     if (empty($message)) {
-        $message = 'No había servicios ni puertos running';
+        $message = __('no_running_services');
     }
 
     echo json_encode([
@@ -881,7 +1066,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'logs' && isAuthenticated()) {
     $logFile = LOG_DIR . '/' . $project . '.log';
 
     if (!file_exists($logFile)) {
-        echo json_encode(['success' => false, 'message' => 'No logs available']);
+        echo json_encode(['success' => false, 'message' => __('no_logs_available')]);
         exit;
     }
 
@@ -904,7 +1089,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'git-pull' && isAuthenticated(
     $projectPath = __DIR__ . '/' . $project;
 
     if (!is_dir($projectPath)) {
-        echo json_encode(['success' => false, 'message' => 'Project not found']);
+        echo json_encode(['success' => false, 'message' => __('project_not_found')]);
         exit;
     }
 
@@ -922,7 +1107,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'git-info' && isAuthenticated(
     $projectPath = __DIR__ . '/' . $project;
 
     if (!is_dir($projectPath)) {
-        echo json_encode(['success' => false, 'message' => 'Project not found']);
+        echo json_encode(['success' => false, 'message' => __('project_not_found')]);
         exit;
     }
 
@@ -1182,7 +1367,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'kill-port' && isAuthenticated
     $port = $_GET['port'] ?? '';
 
     if (!is_numeric($port)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid port']);
+        echo json_encode(['success' => false, 'message' => __('invalid_port')]);
         exit;
     }
 
@@ -1191,7 +1376,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'kill-port' && isAuthenticated
     $pids = shell_exec($cmd);
 
     if (empty(trim($pids))) {
-        echo json_encode(['success' => false, 'message' => 'No process using port ' . $port]);
+        echo json_encode(['success' => false, 'message' => __('no_process_on_port') . ' ' . $port]);
         exit;
     }
 
@@ -1221,7 +1406,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'kill-port' && isAuthenticated
 
     echo json_encode([
         'success' => true,
-        'message' => 'Proceso(s) terminado(s) en puerto ' . $port,
+        'message' => __('process_terminated') . ' ' . $port,
         'killedPids' => $killedPids
     ]);
     exit;
@@ -1233,7 +1418,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
         $_SESSION['authenticated'] = true;
         $_SESSION['last_activity'] = time();
     } else {
-        $error = 'Contraseña incorrecta';
+        $error = __('incorrect_password');
     }
 }
 
@@ -1263,11 +1448,11 @@ function getProjects() {
             $projectInfo = [
                 'name' => $item,
                 'title' => ucwords(str_replace(['-', '_'], ' ', $item)),
-                'description' => 'Backend project without description.',
+                'description' => __('backend_no_desc'),
                 'image' => null,
                 'url' => $item . '/',
                 'startScript' => null,
-                'startLabel' => 'Start',
+                'startLabel' => __('start'),
                 'scriptType' => 'bash',
                 'port' => null,
                 'isRunning' => false,
@@ -1315,14 +1500,15 @@ function getProjects() {
 
 $projects = isAuthenticated() ? getProjects() : [];
 $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
+$currentLang = getCurrentLanguage();
 ?>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="<?php echo $currentLang; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-    <title><?php echo SITE_NAME; ?></title>
+    <title><?php echo __('site_name'); ?></title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -1336,7 +1522,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>
-                    <h1><?php echo SITE_NAME; ?></h1>
+                    <h1><?php echo __('site_name'); ?></h1>
                 </div>
 
                 <?php if (isset($error)): ?>
@@ -1345,45 +1531,57 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
 
                 <form method="POST" action="">
                     <div class="form-group">
-                        <label for="password">Contraseña</label>
+                        <label for="password"><?php echo __('password'); ?></label>
                         <input type="password" id="password" name="password" required autofocus
-                               placeholder="Introduce la contraseña">
+                               placeholder="<?php echo __('enter_password'); ?>">
                     </div>
-                    <button type="submit" class="btn-login">Acceder</button>
+                    <button type="submit" class="btn-login"><?php echo __('login'); ?></button>
                 </form>
+
+                <!-- Language Selector -->
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="?lang=en" style="color: #64748b; text-decoration: none; margin: 0 10px; <?php echo getCurrentLanguage() === 'en' ? 'font-weight: bold; color: #3b82f6;' : ''; ?>">English</a>
+                    <span style="color: #64748b;">|</span>
+                    <a href="?lang=es" style="color: #64748b; text-decoration: none; margin: 0 10px; <?php echo getCurrentLanguage() === 'es' ? 'font-weight: bold; color: #3b82f6;' : ''; ?>">Español</a>
+                </div>
             </div>
         </div>
 
         <?php else: ?>
         <!-- Project Dashboard -->
         <header class="dashboard-header">
-            <h1><?php echo SITE_NAME; ?></h1>
+            <h1><?php echo __('site_name'); ?></h1>
             <div class="header-actions">
+                <!-- Language Selector -->
+                <div style="margin-right: 15px;">
+                    <a href="?lang=en" style="color: #64748b; text-decoration: none; padding: 5px 10px; <?php echo getCurrentLanguage() === 'en' ? 'font-weight: bold; color: #3b82f6; background: #f1f5f9; border-radius: 4px;' : ''; ?>">EN</a>
+                    <a href="?lang=es" style="color: #64748b; text-decoration: none; padding: 5px 10px; <?php echo getCurrentLanguage() === 'es' ? 'font-weight: bold; color: #3b82f6; background: #f1f5f9; border-radius: 4px;' : ''; ?>">ES</a>
+                </div>
                 <span id="runningCount" class="running-badge <?php echo $runningCount > 0 ? 'active' : ''; ?>">
                     <span class="pulse"></span>
-                    <span class="count"><?php echo $runningCount; ?></span> running
+                    <span class="count"><?php echo $runningCount; ?></span> <?php echo __('running'); ?>
                 </span>
-                <button class="btn-ports" onclick="showOpenPorts()" title="Ver puertos abiertos">
+                <button class="btn-ports" onclick="showOpenPorts()" title="<?php echo __('view_open_ports'); ?>">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
                     </svg>
-                    Ports
+                    <?php echo __('ports'); ?>
                 </button>
-                <button class="btn-stop-all" onclick="stopAllServices()" title="Stop todos los servicios">
+                <button class="btn-stop-all" onclick="stopAllServices()" title="<?php echo __('stop_all_services'); ?>">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2"/>
                     </svg>
-                    Stop All
+                    <?php echo __('stop_all'); ?>
                 </button>
-                <a href="?logout" class="btn-logout">Logout</a>
+                <a href="?logout" class="btn-logout"><?php echo __('logout'); ?></a>
             </div>
         </header>
 
         <main class="projects-grid">
             <?php if (empty($projects)): ?>
             <div class="no-projects">
-                <p>No projects available.</p>
+                <p><?php echo __('no_projects'); ?></p>
             </div>
             <?php else: ?>
                 <?php foreach ($projects as $project): ?>
@@ -1392,7 +1590,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                         <div class="project-image">
                             <?php if ($project['isRunning']): ?>
                             <div class="running-indicator">
-                                <span class="pulse"></span> En ejecución
+                                <span class="pulse"></span> <?php echo __('running_indicator'); ?>
                             </div>
                             <?php endif; ?>
                             <?php if ($project['isGitRepo'] && $project['repoUrl']): ?>
@@ -1401,7 +1599,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                                    target="_blank"
                                    class="btn-git btn-git-repo"
                                    onclick="event.stopPropagation();"
-                                   title="Open on GitHub">
+                                   title="<?php echo __('open_on_github'); ?>">
                                     <svg viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                     </svg>
@@ -1419,12 +1617,12 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                                     <line x1="8" y1="21" x2="16" y2="21"/>
                                     <line x1="12" y1="17" x2="12" y2="21"/>
                                 </svg>
-                                <span>Frontend Project</span>
+                                <span><?php echo __('frontend_project'); ?></span>
                                 <?php else: ?>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                     <path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
-                                <span>Backend Project</span>
+                                <span><?php echo __('backend_project'); ?></span>
                                 <?php endif; ?>
                             </div>
                             <?php endif; ?>
@@ -1463,7 +1661,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                                 <polyline points="15 3 21 3 21 9"/>
                                 <line x1="10" y1="14" x2="21" y2="3"/>
                             </svg>
-                            Open
+                            <?php echo __('open'); ?>
                         </a>
                         <?php if ($project['startScript']): ?>
                             <?php if ($project['isRunning']): ?>
@@ -1473,7 +1671,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="6" y="6" width="12" height="12"/>
                                 </svg>
-                                Stop
+                                <?php echo __('stop'); ?>
                             </button>
                             <button class="btn-action btn-logs"
                                     data-project="<?php echo htmlspecialchars($project['name']); ?>"
@@ -1484,7 +1682,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                                     <line x1="16" y1="13" x2="8" y2="13"/>
                                     <line x1="16" y1="17" x2="8" y2="17"/>
                                 </svg>
-                                Logs
+                                <?php echo __('logs'); ?>
                             </button>
                             <?php else: ?>
                             <button class="btn-action btn-start"
@@ -1493,7 +1691,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polygon points="5 3 19 12 5 21 5 3"/>
                                 </svg>
-                                <?php echo htmlspecialchars($project['startLabel']); ?>
+                                <?php echo __('start'); ?>
                             </button>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -1507,7 +1705,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
         <div id="resultModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 id="modalTitle">Ejecutando...</h3>
+                    <h3 id="modalTitle"><?php echo __('executing'); ?></h3>
                     <button class="modal-close" onclick="closeModal()">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -1515,7 +1713,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                     <div id="modalResult" class="result-output"></div>
                 </div>
                 <div class="modal-footer" id="modalFooter" style="display: none;">
-                    <button class="btn-action btn-primary" onclick="closeModalAndReload()">Cerrar y actualizar</button>
+                    <button class="btn-action btn-primary" onclick="closeModalAndReload()"><?php echo __('close_and_update'); ?></button>
                 </div>
             </div>
         </div>
@@ -1524,7 +1722,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
         <div id="portsModal" class="modal">
             <div class="modal-content ports-modal-content">
                 <div class="modal-header">
-                    <h3>Ports Abiertos</h3>
+                    <h3><?php echo __('open_ports'); ?></h3>
                     <button class="modal-close" onclick="closePortsModal()">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -1537,23 +1735,52 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                             <path d="M1 4v6h6"/>
                             <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                         </svg>
-                        Actualizar
+                        <?php echo __('update'); ?>
                     </button>
-                    <button class="btn-action btn-primary" onclick="closePortsModal()">Cerrar</button>
+                    <button class="btn-action btn-primary" onclick="closePortsModal()"><?php echo __('close'); ?></button>
                 </div>
             </div>
         </div>
 
         <footer class="dashboard-footer">
-            <p><?php echo count($projects); ?> proyecto(s) disponible(s)</p>
+            <p><?php echo count($projects) . ' ' . __('projects_available'); ?></p>
         </footer>
         <?php endif; ?>
     </div>
 
     <script>
+    // Translations for JavaScript
+    const i18n = <?php echo json_encode([
+        'starting_service' => __('starting_service'),
+        'stopping_service' => __('stopping_service'),
+        'stopping_all_services' => __('stopping_all_services'),
+        'loading_logs' => __('loading_logs'),
+        'updating_repository' => __('updating_repository'),
+        'service_started' => __('service_started'),
+        'service_starting' => __('service_starting'),
+        'service_stopped' => __('service_stopped'),
+        'services_stopped' => __('services_stopped'),
+        'repository_updated' => __('repository_updated'),
+        'connection_error' => __('connection_error'),
+        'error' => __('error'),
+        'no_open_ports' => __('no_open_ports'),
+        'port' => __('port'),
+        'project' => __('project'),
+        'application' => __('application'),
+        'type' => __('type'),
+        'action' => __('action'),
+        'kill' => __('kill'),
+        'terminate_process' => __('terminate_process'),
+        'error_loading_ports' => __('error_loading_ports'),
+        'stop_all_confirm' => __('stop_all_confirm'),
+        'kill_port_confirm' => __('kill_port_confirm'),
+        'process_terminated' => __('process_terminated'),
+        'logs' => __('logs')
+    ], JSON_UNESCAPED_UNICODE); ?>;
+
     function runScript(button) {
         const project = button.dataset.project;
-        showModal('Starting service...', true);
+        showModal(i18n.starting_service, true);
 
         button.disabled = true;
         button.classList.add('loading');
@@ -1562,13 +1789,13 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
             .then(response => response.json())
             .then(data => {
                 updateModal(
-                    data.success ? (data.running ? 'Servicio iniciado' : 'Service starting') : 'Error',
+                    data.success ? (data.running ? i18n.service_started : i18n.service_starting) : i18n.error,
                     data.output || data.message,
                     data.success
                 );
             })
             .catch(error => {
-                updateModal('Error', 'Connection error: ' + error.message, false);
+                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
             })
             .finally(() => {
                 button.disabled = false;
@@ -1578,7 +1805,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
 
     function stopService(button) {
         const project = button.dataset.project;
-        showModal('Stopping service...', true);
+        showModal(i18n.stopping_service, true);
 
         button.disabled = true;
 
@@ -1586,56 +1813,56 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
             .then(response => response.json())
             .then(data => {
                 updateModal(
-                    data.success ? 'Service stopped' : 'Error',
+                    data.success ? i18n.service_stopped : i18n.error,
                     data.message,
                     data.success
                 );
             })
             .catch(error => {
-                updateModal('Error', 'Connection error: ' + error.message, false);
+                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
             });
     }
 
     function stopAllServices() {
-        if (!confirm('Stop all running services?')) return;
+        if (!confirm(i18n.stop_all_confirm)) return;
 
-        showModal('Stopping all services...', true);
+        showModal(i18n.stopping_all_services, true);
 
         fetch('?action=stop-all')
             .then(response => response.json())
             .then(data => {
                 updateModal(
-                    'Services stopped',
+                    i18n.services_stopped,
                     data.message,
                     data.success
                 );
             })
             .catch(error => {
-                updateModal('Error', 'Connection error: ' + error.message, false);
+                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
             });
     }
 
     function viewLogs(button) {
         const project = button.dataset.project;
-        showModal('Loading logs...', true);
+        showModal(i18n.loading_logs, true);
 
         fetch(`?action=logs&project=${encodeURIComponent(project)}`)
             .then(response => response.json())
             .then(data => {
                 updateModal(
-                    'Logs: ' + project,
+                    i18n.logs + ': ' + project,
                     data.logs || data.message,
                     data.success
                 );
             })
             .catch(error => {
-                updateModal('Error', 'Connection error: ' + error.message, false);
+                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
             });
     }
 
     function gitPull(button) {
         const project = button.dataset.project;
-        showModal('Updating repository...', true);
+        showModal(i18n.updating_repository, true);
 
         button.disabled = true;
         button.classList.add('loading');
@@ -1644,13 +1871,13 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
             .then(response => response.json())
             .then(data => {
                 updateModal(
-                    data.success ? 'Repository updated' : 'Error',
+                    data.success ? i18n.repository_updated : i18n.error,
                     data.output || data.message,
                     data.success
                 );
             })
             .catch(error => {
-                updateModal('Error', 'Connection error: ' + error.message, false);
+                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
             })
             .finally(() => {
                 button.disabled = false;
@@ -1730,11 +1957,11 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                 loader.style.display = 'none';
 
                 if (!data.success || data.ports.length === 0) {
-                    portsList.innerHTML = '<div class="no-ports">No hay puertos abiertos en este momento</div>';
+                    portsList.innerHTML = '<div class="no-ports">' + i18n.no_open_ports + '</div>';
                     return;
                 }
 
-                let html = '<table class="ports-table"><thead><tr><th>Port</th><th>Project</th><th>Application</th><th>Type</th><th>PID</th><th>Action</th></tr></thead><tbody>';
+                let html = '<table class="ports-table"><thead><tr><th>' + i18n.port + '</th><th>' + i18n.project + '</th><th>' + i18n.application + '</th><th>' + i18n.type + '</th><th>PID</th><th>' + i18n.action + '</th></tr></thead><tbody>';
 
                 data.ports.forEach(port => {
                     // Generar información del proyecto
@@ -1754,13 +1981,13 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
                             <td><span class="app-type-badge">${port.appType}</span></td>
                             <td>${port.pid || 'N/A'}</td>
                             <td>
-                                <button class="btn-kill" onclick="killPort(${port.port})" title="Terminar proceso">
+                                <button class="btn-kill" onclick="killPort(${port.port})" title="${i18n.terminate_process}">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <circle cx="12" cy="12" r="10"/>
                                         <line x1="15" y1="9" x2="9" y2="15"/>
                                         <line x1="9" y1="9" x2="15" y2="15"/>
                                     </svg>
-                                    Kill
+                                    ${i18n.kill}
                                 </button>
                             </td>
                         </tr>
@@ -1772,7 +1999,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
             })
             .catch(error => {
                 loader.style.display = 'none';
-                portsList.innerHTML = '<div class="error-message">Error al cargar puertos: ' + error.message + '</div>';
+                portsList.innerHTML = '<div class="error-message">' + i18n.error_loading_ports + ': ' + error.message + '</div>';
             });
     }
 
@@ -1786,7 +2013,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
     }
 
     function killPort(port) {
-        if (!confirm(`¿Terminar el proceso en el puerto ${port}?`)) {
+        if (!confirm(i18n.kill_port_confirm + ' ' + port + '?')) {
             return;
         }
 
