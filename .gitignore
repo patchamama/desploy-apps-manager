@@ -1,0 +1,39 @@
+# Ignore folders containing git repositories
+Chess-API-Example/
+elo_log_viewer/
+maestro-organizator-app/
+MVP-LogistiQ/
+
+# System and editor files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.log
+
+# Dependency folders
+node_modules/
+vendor/
+venv/
+env/
+.venv/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cache and temp files
+.cache/
+.temp/
+*.tmp
+*.cache
+
+# OS specific
+Thumbs.db
+.directory
