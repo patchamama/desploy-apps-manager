@@ -2268,24 +2268,28 @@ $currentLang = getCurrentLanguage();
         fetch(`?action=get-todo&project=${encodeURIComponent(project)}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    const content = data.todo || '';
-                    textarea.value = content;
-                    originalTodoContent = content;
-                }
+                const content = (data && data.success && data.todo) ? data.todo : '';
+                textarea.value = content;
+                originalTodoContent = content;
                 textarea.disabled = false;
                 textarea.focus();
             })
             .catch(error => {
                 console.error('Error loading TODO:', error);
+                textarea.value = '';
+                originalTodoContent = '';
                 textarea.disabled = false;
             });
     }
 
     function hasUnsavedChanges() {
         const textarea = document.getElementById('todoTextarea');
-        const currentContent = textarea.value;
-        return currentContent !== originalTodoContent;
+        if (!textarea) return false;
+
+        const currentContent = String(textarea.value);
+        const original = String(originalTodoContent);
+
+        return currentContent !== original;
     }
 
     function closeTodoModal() {
