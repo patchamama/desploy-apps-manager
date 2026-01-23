@@ -60,6 +60,18 @@ To create a unified, easy-to-use deployment and management solution that:
 - Environment variable support for GitHub tokens
 - Secure credential handling
 
+### 8. **TODO Management**
+- Add and manage TODO notes for projects and the application itself
+- Secure storage in `.todos/` directory (excluded from git)
+- Real-time note editing through intuitive modal interface
+- Organize development tasks and notes per project
+
+### 9. **Git Status Indicators**
+- Visual indicators showing pending git changes
+- Pulsing yellow dot on GitHub icons when uncommitted changes exist
+- Quick identification of projects needing commits
+- Helps maintain clean repository status
+
 ## 🛠️ Supported Technologies
 
 ### Backend Frameworks
@@ -90,12 +102,29 @@ To create a unified, easy-to-use deployment and management solution that:
 - **Tools**: Git, Node.js (optional), Python 3 (optional), Java (optional)
 - **Permissions**: Proper user permissions for process management
 
-## 🚀 Installation & Setup
+## ⚡ Quick Start
+
+```bash
+# 1. Copy the application to your deployment directory
+cp -r deployment-hub /var/www/your-domain/
+
+# 2. Configure permissions
+chmod 755 /var/www/your-domain/deployment-hub
+chmod 700 /var/www/your-domain/deployment-hub/.todos
+
+# 3. Create config.php with your settings
+echo "<?php define('PASSWORD_HASH', password_hash('your_password', PASSWORD_BCRYPT)); ?>" > config.php
+
+# 4. Access the application
+# Navigate to http://your-domain.com/deployment-hub/
+```
+
+## 🚀 Detailed Installation & Setup
 
 ### 1. **Clone or Deploy the Application**
 
 ```bash
-cd /var/www/vhosts/patchamama.com/backend.patchamama.com
+cd /path/to/your/deployment/directory
 ```
 
 ### 2. **Configure the Environment**
@@ -113,8 +142,9 @@ define('SESSION_TIMEOUT', 1800); // 30 minutes
 ### 3. **Set Proper Permissions**
 
 ```bash
-chmod 755 /var/www/vhosts/patchamama.com/backend.patchamama.com
-chmod 755 /var/www/vhosts/patchamama.com/backend.patchamama.com/*
+chmod 755 /path/to/your/deployment/directory
+chmod 755 /path/to/your/deployment/directory/*
+chmod 700 /path/to/your/deployment/directory/.todos
 ```
 
 ### 4. **Create Project Configuration**
@@ -165,7 +195,7 @@ Create `.github-config.json` for git operations:
 
 ### 6. **Access the Dashboard**
 
-Navigate to: `http://your-domain.com`
+Navigate to: `http://your-domain.com/path/to/application`
 
 Login with your configured password.
 
@@ -200,9 +230,17 @@ Login with your configured password.
 
 ### Git Operations
 
-1. Projects with Git repositories display a GitHub icon
+1. Projects with Git repositories display a GitHub link with a pulsing indicator when changes are pending
 2. Click to open the repository in GitHub
 3. Use the built-in git pull functionality for updates
+4. The yellow indicator shows uncommitted changes in the project
+
+### Managing TODOs
+
+1. Click the **TODO** button in the header to manage application-level notes
+2. Click the **TODO** icon on any project card to add notes specific to that project
+3. Save your notes securely in the encrypted `.todos/` directory
+4. Notes are not tracked in git for privacy and flexibility
 
 ## 🔌 API Endpoints
 
@@ -225,6 +263,11 @@ All endpoints require authentication.
 
 - **List Ports**: `GET /?action=list-ports`
 - **Kill Port**: `GET /?action=kill-port&port=5000`
+
+### TODO Management
+
+- **Get TODO**: `GET /?action=get-todo&project=project-name`
+- **Save TODO**: `POST /?action=save-todo` (with `project` and `content` parameters)
 
 ### Response Format
 
@@ -295,6 +338,8 @@ The system automatically:
 - Live port status indication
 - Application status badges
 - Running services counter
+- Git status indicators showing pending changes
+- Visual pulsing indicators for uncommitted work
 
 ### Log Files
 
@@ -318,11 +363,13 @@ Application logs are stored in:
 4. **Git Tokens**: Use GitHub Personal Access Tokens (PATs) with limited scopes
 5. **Process Isolation**: Run applications under appropriate user accounts
 6. **Regular Updates**: Keep frameworks and dependencies updated
+7. **TODO Directory**: The `.todos/` directory has restricted permissions (700) and is excluded from git
+8. **Sensitive Data**: Do not store passwords or API keys in TODO notes; use environment variables instead
 
 ## 📁 Project Structure
 
 ```
-backend.patchamama.com/
+deployment-hub/
 ├── index.php                 # Main application
 ├── config.php               # Configuration file
 ├── assets/
@@ -330,11 +377,12 @@ backend.patchamama.com/
 ├── .gitignore              # Git ignore rules
 ├── .logs/                  # Application logs
 ├── .pids/                  # PID tracking files
+├── .todos/                 # TODO notes (not tracked in git)
 ├── .services-state.json    # Service state
-├── Chess-API-Example/      # Example project
-├── elo_log_viewer/         # Log viewer application
-├── maestro-organizator-app/ # Task management app
-└── MVP-LogistiQ/           # Logistics application
+├── .github-config.json     # GitHub integration config
+├── project-1/              # Your first project
+├── project-2/              # Your second project
+└── project-n/              # Additional projects
 ```
 
 ## 🚦 Project Status Indicators
@@ -489,7 +537,8 @@ This project is provided as-is for deployment and application management purpose
 
 **Last Updated**: January 2026
 
-**Version**: 2.0
+**Version**: 2.1
 
-**Maintained By**: Development Team
-# desploy-apps-manager
+**Features**: Application Deployment, Project Management, Git Integration, TODO Notes, Real-time Monitoring
+
+**License**: This project is provided as-is for deployment and application management purposes.

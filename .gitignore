@@ -34,6 +34,9 @@ env/
 *.tmp
 *.cache
 
+# TODO files (sensitive data)
+.todos/
+
 # OS specific
 Thumbs.db
 .directory

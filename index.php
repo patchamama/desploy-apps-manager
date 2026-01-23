@@ -7,10 +7,12 @@ define('PID_DIR', __DIR__ . '/.pids');
 define('LOG_DIR', __DIR__ . '/.logs');
 define('STATE_FILE', __DIR__ . '/.services-state.json');
 define('GITHUB_CONFIG_FILE', __DIR__ . '/.github-config.json');
+define('TODO_DIR', __DIR__ . '/.todos');
 
 // Create directories if they don't exist
 if (!is_dir(PID_DIR)) mkdir(PID_DIR, 0755, true);
 if (!is_dir(LOG_DIR)) mkdir(LOG_DIR, 0755, true);
+if (!is_dir(TODO_DIR)) mkdir(TODO_DIR, 0700, true); // More restrictive permissions for TODOs
 
 // Internationalization (i18n) - Language support
 $translations = [
@@ -40,6 +42,12 @@ $translations = [
         'stop' => 'Stop',
         'logs' => 'Logs',
         'open_on_github' => 'Open on GitHub',
+        'edit_todo' => 'Edit TODO',
+        'todo_notes' => 'TODO Notes',
+        'save' => 'Save',
+        'todo_saved' => 'TODO saved successfully',
+        'todo_placeholder' => 'Write your TODO notes here...',
+        'pending_changes' => 'Pending changes',
 
         // Modal
         'executing' => 'Executing...',
@@ -115,6 +123,12 @@ $translations = [
         'stop' => 'Detener',
         'logs' => 'Logs',
         'open_on_github' => 'Abrir en GitHub',
+        'edit_todo' => 'Editar TODO',
+        'todo_notes' => 'Notas TODO',
+        'save' => 'Guardar',
+        'todo_saved' => 'TODO guardado exitosamente',
+        'todo_placeholder' => 'Escribe tus notas TODO aquí...',
+        'pending_changes' => 'Cambios pendientes',
 
         // Modal
         'executing' => 'Ejecutando...',
@@ -229,6 +243,53 @@ function getGitRepoUrl($projectPath) {
     }
 
     return $url;
+}
+
+// Check if a project has pending changes in git
+function hasGitChanges($projectPath) {
+    if (!is_dir($projectPath . '/.git')) {
+        return false;
+    }
+
+    $output = shell_exec('cd ' . escapeshellarg($projectPath) . ' && git status --porcelain 2>/dev/null');
+    return !empty(trim($output));
+}
+
+// Function to sanitize project name for TODO files (security)
+function sanitizeTodoProjectName($projectName) {
+    // Remove any path traversal attempts and ensure it's just a simple name
+    $projectName = basename($projectName);
+    $projectName = preg_replace('/[^a-zA-Z0-9_-]/', '', $projectName);
+    return $projectName;
+}
+
+// Function to get TODO file path for a project
+function getTodoFilePath($projectName) {
+    $safeName = sanitizeTodoProjectName($projectName);
+    if (empty($safeName)) {
+        return null;
+    }
+    return TODO_DIR . '/' . $safeName . '.txt';
+}
+
+// Function to load TODO for a project
+function loadTodo($projectName) {
+    $filePath = getTodoFilePath($projectName);
+    if (!$filePath || !file_exists($filePath)) {
+        return '';
+    }
+    return file_get_contents($filePath);
+}
+
+// Function to save TODO for a project
+function saveTodo($projectName, $content) {
+    $filePath = getTodoFilePath($projectName);
+    if (!$filePath) {
+        return false;
+    }
+    // Sanitize content to prevent code injection
+    $content = strip_tags($content);
+    return file_put_contents($filePath, $content, LOCK_EX) !== false;
 }
 
 // Execute git fetch and pull with authentication
@@ -1412,6 +1473,45 @@ if (isset($_GET['action']) && $_GET['action'] === 'kill-port' && isAuthenticated
     exit;
 }
 
+// API: Get TODO for a project
+if (isset($_GET['action']) && $_GET['action'] === 'get-todo' && isAuthenticated()) {
+    header('Content-Type: application/json');
+
+    $project = $_GET['project'] ?? '';
+    $project = basename($project);
+
+    $todo = loadTodo($project);
+
+    echo json_encode([
+        'success' => true,
+        'todo' => $todo
+    ]);
+    exit;
+}
+
+// API: Save TODO for a project
+if (isset($_GET['action']) && $_GET['action'] === 'save-todo' && isAuthenticated()) {
+    header('Content-Type: application/json');
+
+    $project = $_POST['project'] ?? '';
+    $project = basename($project);
+    $content = $_POST['content'] ?? '';
+
+    // Additional validation
+    if (empty($project)) {
+        echo json_encode(['success' => false, 'message' => __('project_not_found')]);
+        exit;
+    }
+
+    $result = saveTodo($project, $content);
+
+    echo json_encode([
+        'success' => $result,
+        'message' => $result ? __('todo_saved') : __('error')
+    ]);
+    exit;
+}
+
 // Process login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
     if (password_verify($_POST['password'], PASSWORD_HASH)) {
@@ -1480,6 +1580,9 @@ function getProjects() {
             $projectInfo['isGitRepo'] = is_dir($projectPath . '/.git');
             if ($projectInfo['isGitRepo']) {
                 $projectInfo['repoUrl'] = getGitRepoUrl($projectPath);
+                $projectInfo['hasGitChanges'] = hasGitChanges($projectPath);
+            } else {
+                $projectInfo['hasGitChanges'] = false;
             }
 
             // Search for image
@@ -1553,10 +1656,21 @@ $currentLang = getCurrentLanguage();
             <h1><?php echo __('site_name'); ?></h1>
             <div class="header-actions">
                 <!-- Language Selector -->
-                <div style="margin-right: 15px;">
-                    <a href="?lang=en" style="color: #64748b; text-decoration: none; padding: 5px 10px; <?php echo getCurrentLanguage() === 'en' ? 'font-weight: bold; color: #3b82f6; background: #f1f5f9; border-radius: 4px;' : ''; ?>">EN</a>
-                    <a href="?lang=es" style="color: #64748b; text-decoration: none; padding: 5px 10px; <?php echo getCurrentLanguage() === 'es' ? 'font-weight: bold; color: #3b82f6; background: #f1f5f9; border-radius: 4px;' : ''; ?>">ES</a>
+                <div class="language-selector">
+                    <a href="?lang=en" class="<?php echo getCurrentLanguage() === 'en' ? 'active' : ''; ?>">EN</a>
+                    <a href="?lang=es" class="<?php echo getCurrentLanguage() === 'es' ? 'active' : ''; ?>">ES</a>
                 </div>
+                <!-- TODO Button -->
+                <button class="btn-header-todo" onclick="openTodoModal(this)" data-project="backend.patchamama.com" title="<?php echo __('edit_todo'); ?>">
+                    TODO
+                </button>
+                <!-- GitHub Button -->
+                <a href="https://github.com/patchamama/desploy-apps-manager"
+                   target="_blank"
+                   class="btn-header-github"
+                   title="<?php echo __('open_on_github'); ?>">
+                    GitHub
+                </a>
                 <span id="runningCount" class="running-badge <?php echo $runningCount > 0 ? 'active' : ''; ?>">
                     <span class="pulse"></span>
                     <span class="count"><?php echo $runningCount; ?></span> <?php echo __('running'); ?>
@@ -1593,19 +1707,30 @@ $currentLang = getCurrentLanguage();
                                 <span class="pulse"></span> <?php echo __('running_indicator'); ?>
                             </div>
                             <?php endif; ?>
-                            <?php if ($project['isGitRepo'] && $project['repoUrl']): ?>
                             <div class="git-actions">
+                                <button class="btn-git btn-git-todo"
+                                        data-project="<?php echo htmlspecialchars($project['name']); ?>"
+                                        onclick="event.preventDefault(); event.stopPropagation(); openTodoModal(this);"
+                                        title="<?php echo __('edit_todo'); ?>">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                    </svg>
+                                </button>
+                                <?php if ($project['isGitRepo'] && $project['repoUrl']): ?>
                                 <a href="<?php echo htmlspecialchars($project['repoUrl']); ?>"
                                    target="_blank"
-                                   class="btn-git btn-git-repo"
+                                   class="btn-git btn-git-repo <?php echo $project['hasGitChanges'] ? 'has-changes' : ''; ?>"
                                    onclick="event.stopPropagation();"
-                                   title="<?php echo __('open_on_github'); ?>">
+                                   title="<?php echo __('open_on_github'); ?><?php echo $project['hasGitChanges'] ? ' - ' . __('pending_changes') : ''; ?>">
+                                    <?php if ($project['hasGitChanges']): ?>
+                                    <span class="git-changes-indicator"></span>
+                                    <?php endif; ?>
                                     <svg viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                                     </svg>
                                 </a>
+                                <?php endif; ?>
                             </div>
-                            <?php endif; ?>
                             <?php if ($project['image']): ?>
                             <img src="<?php echo htmlspecialchars($project['image']); ?>"
                                  alt="<?php echo htmlspecialchars($project['title']); ?>">
@@ -1742,6 +1867,32 @@ $currentLang = getCurrentLanguage();
             </div>
         </div>
 
+        <!-- TODO Modal -->
+        <div id="todoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><?php echo __('todo_notes'); ?>: <span id="todoProjectName"></span></h3>
+                    <button class="modal-close" onclick="closeTodoModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="todoTextarea"
+                              placeholder="<?php echo __('todo_placeholder'); ?>"
+                              style="width: 100%; min-height: 300px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: monospace; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-action" onclick="closeTodoModal()"><?php echo __('close'); ?></button>
+                    <button class="btn-action btn-primary" onclick="saveTodo()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        <?php echo __('save'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <footer class="dashboard-footer">
             <p><?php echo count($projects) . ' ' . __('projects_available'); ?></p>
         </footer>
@@ -1775,7 +1926,10 @@ $currentLang = getCurrentLanguage();
         'stop_all_confirm' => __('stop_all_confirm'),
         'kill_port_confirm' => __('kill_port_confirm'),
         'process_terminated' => __('process_terminated'),
-        'logs' => __('logs')
+        'logs' => __('logs'),
+        'todo_saved' => __('todo_saved'),
+        'edit_todo' => __('edit_todo'),
+        'todo_placeholder' => __('todo_placeholder')
     ], JSON_UNESCAPED_UNICODE); ?>;
 
     function runScript(button) {
@@ -2084,6 +2238,78 @@ $currentLang = getCurrentLanguage();
                 }
             });
     }, 30000);
+
+    // TODO Modal functions
+    let currentTodoProject = null;
+
+    function openTodoModal(button) {
+        const project = button.dataset.project;
+        currentTodoProject = project;
+
+        const modal = document.getElementById('todoModal');
+        const projectNameSpan = document.getElementById('todoProjectName');
+        const textarea = document.getElementById('todoTextarea');
+
+        projectNameSpan.textContent = project;
+        textarea.value = '';
+        textarea.disabled = true;
+
+        modal.classList.add('active');
+
+        // Load TODO content
+        fetch(`?action=get-todo&project=${encodeURIComponent(project)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    textarea.value = data.todo || '';
+                }
+                textarea.disabled = false;
+                textarea.focus();
+            })
+            .catch(error => {
+                console.error('Error loading TODO:', error);
+                textarea.disabled = false;
+            });
+    }
+
+    function closeTodoModal() {
+        document.getElementById('todoModal').classList.remove('active');
+        currentTodoProject = null;
+    }
+
+    function saveTodo() {
+        if (!currentTodoProject) return;
+
+        const textarea = document.getElementById('todoTextarea');
+        const content = textarea.value;
+
+        const formData = new FormData();
+        formData.append('project', currentTodoProject);
+        formData.append('content', content);
+
+        fetch('?action=save-todo', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(i18n.todo_saved, 'success');
+                } else {
+                    showNotification(data.message || i18n.error, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification(i18n.error + ': ' + error.message, 'error');
+            });
+    }
+
+    // Close TODO modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('todoModal').classList.contains('active')) {
+            closeTodoModal();
+        }
+    });
     </script>
 </body>
 </html>
