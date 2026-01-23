@@ -48,6 +48,7 @@ $translations = [
         'todo_saved' => 'TODO saved successfully',
         'todo_placeholder' => 'Write your TODO notes here...',
         'pending_changes' => 'Pending changes',
+        'unsaved_changes' => 'There are unsaved changes. Do you want to close without saving?',
 
         // Modal
         'executing' => 'Executing...',
@@ -129,6 +130,7 @@ $translations = [
         'todo_saved' => 'TODO guardado exitosamente',
         'todo_placeholder' => 'Escribe tus notas TODO aquí...',
         'pending_changes' => 'Cambios pendientes',
+        'unsaved_changes' => 'Hay cambios sin guardar. ¿Deseas cerrar sin guardar?',
 
         // Modal
         'executing' => 'Ejecutando...',
@@ -1872,7 +1874,14 @@ $currentLang = getCurrentLanguage();
             <div class="modal-content">
                 <div class="modal-header">
                     <h3><?php echo __('todo_notes'); ?>: <span id="todoProjectName"></span></h3>
-                    <button class="modal-close" onclick="closeTodoModal()">&times;</button>
+                    <div class="modal-header-actions">
+                        <button class="modal-maximize" onclick="toggleMaximizeTodoModal()" title="Maximizar/Restaurar">
+                            <svg id="maximizeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+                            </svg>
+                        </button>
+                        <button class="modal-close" onclick="closeTodoModal()">&times;</button>
+                    </div>
                 </div>
                 <div class="modal-body">
                     <textarea id="todoTextarea"
@@ -1929,7 +1938,8 @@ $currentLang = getCurrentLanguage();
         'logs' => __('logs'),
         'todo_saved' => __('todo_saved'),
         'edit_todo' => __('edit_todo'),
-        'todo_placeholder' => __('todo_placeholder')
+        'todo_placeholder' => __('todo_placeholder'),
+        'unsaved_changes' => __('unsaved_changes')
     ], JSON_UNESCAPED_UNICODE); ?>;
 
     function runScript(button) {
@@ -2241,6 +2251,8 @@ $currentLang = getCurrentLanguage();
 
     // TODO Modal functions
     let currentTodoProject = null;
+    let originalTodoContent = '';
+    let currentTodoContent = '';
 
     function openTodoModal(button) {
         const project = button.dataset.project;
@@ -2253,6 +2265,8 @@ $currentLang = getCurrentLanguage();
         projectNameSpan.textContent = project;
         textarea.value = '';
         textarea.disabled = true;
+        originalTodoContent = '';
+        currentTodoContent = '';
 
         modal.classList.add('active');
 
@@ -2262,6 +2276,8 @@ $currentLang = getCurrentLanguage();
             .then(data => {
                 if (data.success) {
                     textarea.value = data.todo || '';
+                    originalTodoContent = data.todo || '';
+                    currentTodoContent = data.todo || '';
                 }
                 textarea.disabled = false;
                 textarea.focus();
@@ -2272,9 +2288,30 @@ $currentLang = getCurrentLanguage();
             });
     }
 
+    function hasUnsavedChanges() {
+        const textarea = document.getElementById('todoTextarea');
+        currentTodoContent = textarea.value;
+        return currentTodoContent !== originalTodoContent;
+    }
+
     function closeTodoModal() {
-        document.getElementById('todoModal').classList.remove('active');
+        if (hasUnsavedChanges()) {
+            if (!confirm(i18n.unsaved_changes)) {
+                return;
+            }
+        }
+
+        const modal = document.getElementById('todoModal');
+        modal.classList.remove('active');
+        modal.classList.remove('maximized');
         currentTodoProject = null;
+        originalTodoContent = '';
+        currentTodoContent = '';
+    }
+
+    function toggleMaximizeTodoModal() {
+        const modal = document.getElementById('todoModal');
+        modal.classList.toggle('maximized');
     }
 
     function saveTodo() {
@@ -2295,6 +2332,9 @@ $currentLang = getCurrentLanguage();
             .then(data => {
                 if (data.success) {
                     showNotification(i18n.todo_saved, 'success');
+                    // Update original content after successful save
+                    originalTodoContent = content;
+                    currentTodoContent = content;
                 } else {
                     showNotification(data.message || i18n.error, 'error');
                 }
