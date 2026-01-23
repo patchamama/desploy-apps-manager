@@ -2,7 +2,7 @@
 
 A comprehensive web-based application deployment and management platform that simplifies the deployment, execution, and monitoring of multiple frontend and backend applications built with different frameworks.
 
-## 🎯 Project Mission
+## Project Mission
 
 To create a unified, easy-to-use deployment and management solution that:
 
@@ -13,7 +13,7 @@ To create a unified, easy-to-use deployment and management solution that:
 - **Multi-Port Management**: Handle applications running on multiple ports simultaneously
 - **Real-Time Monitoring**: Monitor application status, logs, and port usage in real-time
 
-## ✨ Key Features
+## Key Features
 
 ### 1. **Unified Dashboard**
 - Web-based interface to manage all deployed applications
@@ -72,7 +72,7 @@ To create a unified, easy-to-use deployment and management solution that:
 - Quick identification of projects needing commits
 - Helps maintain clean repository status
 
-## 🛠️ Supported Technologies
+## Supported Technologies
 
 ### Backend Frameworks
 - **Python**: Django, FastAPI, Flask, Streamlit
@@ -94,7 +94,7 @@ To create a unified, easy-to-use deployment and management solution that:
 - **Apache** (httpd)
 - **PHP Built-in Server**
 
-## 📋 System Requirements
+## System Requirements
 
 - **Server**: Linux/Unix-based system (Ubuntu, CentOS, Debian, etc.)
 - **PHP**: >= 7.4
@@ -102,7 +102,7 @@ To create a unified, easy-to-use deployment and management solution that:
 - **Tools**: Git, Node.js (optional), Python 3 (optional), Java (optional)
 - **Permissions**: Proper user permissions for process management
 
-## ⚡ Quick Start
+## Quick Start
 
 ```bash
 # 1. Copy the application to your deployment directory
@@ -119,7 +119,7 @@ echo "<?php define('PASSWORD_HASH', password_hash('your_password', PASSWORD_BCRY
 # Navigate to http://your-domain.com/deployment-hub/
 ```
 
-## 🚀 Detailed Installation & Setup
+## Detailed Installation & Setup
 
 ### 1. **Clone or Deploy the Application**
 
@@ -199,7 +199,7 @@ Navigate to: `http://your-domain.com/path/to/application`
 
 Login with your configured password.
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### Starting an Application
 
@@ -242,7 +242,7 @@ Login with your configured password.
 3. Save your notes securely in the encrypted `.todos/` directory
 4. Notes are not tracked in git for privacy and flexibility
 
-## 🔌 API Endpoints
+## API Endpoints
 
 All endpoints require authentication.
 
@@ -279,7 +279,7 @@ All endpoints require authentication.
 }
 ```
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 ### Multiple Scripts Per Application
 
@@ -330,7 +330,7 @@ The system automatically:
 - Logs all operations with timestamps
 - Recovers from crashed processes
 
-## 📊 Monitoring & Logs
+## Monitoring & Logs
 
 ### Real-Time Monitoring
 
@@ -355,7 +355,7 @@ Application logs are stored in:
 - Real-time log streaming
 - Download logs for analysis
 
-## 🔒 Security Considerations
+## Security Considerations
 
 1. **Change Default Password**: Always update the default password
 2. **Use HTTPS**: Deploy behind a reverse proxy with SSL/TLS
@@ -366,7 +366,7 @@ Application logs are stored in:
 7. **TODO Directory**: The `.todos/` directory has restricted permissions (700) and is excluded from git
 8. **Sensitive Data**: Do not store passwords or API keys in TODO notes; use environment variables instead
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 deployment-hub/
@@ -385,7 +385,7 @@ deployment-hub/
 └── project-n/              # Additional projects
 ```
 
-## 🚦 Project Status Indicators
+## Project Status Indicators
 
 ### Running (Green)
 - All configured ports are active
@@ -402,7 +402,7 @@ deployment-hub/
 - Check logs for details
 - May need debugging
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Areas for improvement:
 
@@ -414,7 +414,7 @@ Contributions are welcome! Areas for improvement:
 6. UI/UX improvements
 7. API enhancements
 
-## 📝 Configuration Examples
+## Configuration Examples
 
 ### Flask Application
 
@@ -479,7 +479,7 @@ Contributions are welcome! Areas for improvement:
 }
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Application Won't Start
 
@@ -509,7 +509,7 @@ Contributions are welcome! Areas for improvement:
 3. Restart affected applications
 4. Monitor system resources
 
-## 📞 Support
+## Support
 
 For issues and questions:
 
@@ -518,11 +518,11 @@ For issues and questions:
 3. Consult framework documentation
 4. Check system resources (disk, memory, CPU)
 
-## 📄 License
+## License
 
 This project is provided as-is for deployment and application management purposes.
 
-## 🎓 Learning Resources
+## Learning Resources
 
 - [PHP Documentation](https://www.php.net/docs.php)
 - [Django Documentation](https://docs.djangoproject.com/)
