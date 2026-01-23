@@ -522,11 +522,27 @@ body {
 }
 
 .modal.maximized .modal-body {
-    max-height: calc(100vh - 140px);
+    max-height: calc(100vh - 120px);
+    padding: 15px;
 }
 
 .modal.maximized #todoTextarea {
-    min-height: calc(100vh - 200px);
+    min-height: calc(100vh - 160px);
+    height: calc(100vh - 160px);
+}
+
+.modal.maximized .modal-footer {
+    padding: 10px 15px;
+}
+
+.modal.maximized .modal-footer .btn-action {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+}
+
+.modal.maximized .modal-footer .btn-action svg {
+    width: 14px;
+    height: 14px;
 }
 
 .modal-body {
