@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#2563eb"/>
+
+  <!-- Rocket body -->
+  <path d="M50 20 L50 65 L45 70 L55 70 Z" fill="#ffffff"/>
+
+  <!-- Rocket nose -->
+  <path d="M50 10 L40 20 L60 20 Z" fill="#ffffff"/>
+
+  <!-- Rocket window -->
+  <circle cx="50" cy="35" r="6" fill="#2563eb"/>
+
+  <!-- Left fin -->
+  <path d="M40 55 L35 65 L45 60 Z" fill="#60a5fa"/>
+
+  <!-- Right fin -->
+  <path d="M60 55 L65 65 L55 60 Z" fill="#60a5fa"/>
+
+  <!-- Flame left -->
+  <path d="M45 70 L42 80 L45 75 Z" fill="#fbbf24"/>
+
+  <!-- Flame center -->
+  <path d="M48 70 L48 82 L52 82 L52 70 Z" fill="#f97316"/>
+
+  <!-- Flame right -->
+  <path d="M55 70 L58 80 L55 75 Z" fill="#fbbf24"/>
+</svg>

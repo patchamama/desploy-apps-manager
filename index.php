@@ -1614,6 +1614,8 @@ $currentLang = getCurrentLanguage();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title><?php echo __('site_name'); ?></title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="alternate icon" href="assets/favicon.svg">
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
