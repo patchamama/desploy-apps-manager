@@ -1875,11 +1875,7 @@ $currentLang = getCurrentLanguage();
                 <div class="modal-header">
                     <h3><?php echo __('todo_notes'); ?>: <span id="todoProjectName"></span></h3>
                     <div class="modal-header-actions">
-                        <button class="modal-maximize" onclick="toggleMaximizeTodoModal()" title="Maximizar/Restaurar">
-                            <svg id="maximizeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
-                            </svg>
-                        </button>
+                        <button class="modal-maximize" onclick="toggleMaximizeTodoModal()" title="Maximizar/Restaurar">+</button>
                         <button class="modal-close" onclick="closeTodoModal()">&times;</button>
                     </div>
                 </div>
