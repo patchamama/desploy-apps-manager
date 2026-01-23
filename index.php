@@ -2248,7 +2248,6 @@ $currentLang = getCurrentLanguage();
     // TODO Modal functions
     let currentTodoProject = null;
     let originalTodoContent = '';
-    let currentTodoContent = '';
 
     function openTodoModal(button) {
         const project = button.dataset.project;
@@ -2262,7 +2261,6 @@ $currentLang = getCurrentLanguage();
         textarea.value = '';
         textarea.disabled = true;
         originalTodoContent = '';
-        currentTodoContent = '';
 
         modal.classList.add('active');
 
@@ -2271,9 +2269,9 @@ $currentLang = getCurrentLanguage();
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    textarea.value = data.todo || '';
-                    originalTodoContent = data.todo || '';
-                    currentTodoContent = data.todo || '';
+                    const content = data.todo || '';
+                    textarea.value = content;
+                    originalTodoContent = content;
                 }
                 textarea.disabled = false;
                 textarea.focus();
@@ -2286,8 +2284,8 @@ $currentLang = getCurrentLanguage();
 
     function hasUnsavedChanges() {
         const textarea = document.getElementById('todoTextarea');
-        currentTodoContent = textarea.value;
-        return currentTodoContent !== originalTodoContent;
+        const currentContent = textarea.value;
+        return currentContent !== originalTodoContent;
     }
 
     function closeTodoModal() {
@@ -2302,12 +2300,13 @@ $currentLang = getCurrentLanguage();
         modal.classList.remove('maximized');
         currentTodoProject = null;
         originalTodoContent = '';
-        currentTodoContent = '';
     }
 
     function toggleMaximizeTodoModal() {
         const modal = document.getElementById('todoModal');
-        modal.classList.toggle('maximized');
+        if (modal) {
+            modal.classList.toggle('maximized');
+        }
     }
 
     function saveTodo() {
@@ -2330,7 +2329,6 @@ $currentLang = getCurrentLanguage();
                     showNotification(i18n.todo_saved, 'success');
                     // Update original content after successful save
                     originalTodoContent = content;
-                    currentTodoContent = content;
                 } else {
                     showNotification(data.message || i18n.error, 'error');
                 }
