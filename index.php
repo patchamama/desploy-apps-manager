@@ -2296,16 +2296,27 @@ $currentLang = getCurrentLanguage();
         }
 
         const modal = document.getElementById('todoModal');
+        const maximizeBtn = document.querySelector('.modal-maximize');
         modal.classList.remove('active');
         modal.classList.remove('maximized');
+        if (maximizeBtn) {
+            maximizeBtn.textContent = '+';
+        }
         currentTodoProject = null;
         originalTodoContent = '';
     }
 
     function toggleMaximizeTodoModal() {
         const modal = document.getElementById('todoModal');
+        const maximizeBtn = document.querySelector('.modal-maximize');
         if (modal) {
             modal.classList.toggle('maximized');
+            // Change button text based on state
+            if (modal.classList.contains('maximized')) {
+                maximizeBtn.textContent = '−';
+            } else {
+                maximizeBtn.textContent = '+';
+            }
         }
     }
 
