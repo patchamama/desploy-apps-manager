@@ -96,7 +96,13 @@ $translations = [
         'no_remote_configured' => 'No remote repository configured',
         'no_startup_script' => 'No startup script configured',
         'backend_no_desc' => 'Backend project without description.',
-        'running_indicator' => 'Running'
+        'running_indicator' => 'Running',
+        'sudo_password_required' => 'Confirmation required',
+        'sudo_password_label' => 'Enter the application password to start this privileged service:',
+        'sudo_password_placeholder' => 'Application password',
+        'sudo_confirm' => 'Confirm and start',
+        'sudo_cancel' => 'Cancel',
+        'sudo_wrong_password' => 'Incorrect sudo password',
     ],
     'es' => [
         'site_name' => 'Centro de Despliegue de Aplicaciones',
@@ -178,7 +184,13 @@ $translations = [
         'no_remote_configured' => 'No hay repositorio remoto configurado',
         'no_startup_script' => 'No hay script de inicio configurado',
         'backend_no_desc' => 'Proyecto backend sin descripción.',
-        'running_indicator' => 'En ejecución'
+        'running_indicator' => 'En ejecución',
+        'sudo_password_required' => 'Confirmación requerida',
+        'sudo_password_label' => 'Ingresa la contraseña de la aplicación para iniciar este servicio privilegiado:',
+        'sudo_password_placeholder' => 'Contraseña de la aplicación',
+        'sudo_confirm' => 'Confirmar e iniciar',
+        'sudo_cancel' => 'Cancelar',
+        'sudo_wrong_password' => 'Contraseña sudo incorrecta',
     ]
 ];
 
@@ -187,9 +199,7 @@ function getCurrentLanguage() {
     if (isset($_SESSION['language'])) {
         return $_SESSION['language'];
     }
-    // Default to browser language if available
-    $browserLang = isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? substr($_SERVER['HTTP_ACCEPT_LANGUAGE'], 0, 2) : 'en';
-    return in_array($browserLang, ['en', 'es']) ? $browserLang : 'en';
+    return 'en'; // Default language is English
 }
 
 // Set language
@@ -281,6 +291,13 @@ function loadTodo($projectName) {
         return '';
     }
     return file_get_contents($filePath);
+}
+
+// Function to count pending tasks (- [ ]) in a project's TODO
+function getTodoPendingCount($projectName) {
+    $content = loadTodo($projectName);
+    if (empty($content)) return 0;
+    return substr_count($content, '- [ ]');
 }
 
 // Function to save TODO for a project
@@ -398,12 +415,39 @@ function isPortInUse($port) {
 }
 
 // Check if a service is really running
-function isServiceRunning($projectName) {
+function isServiceRunning($projectName, $processPattern = null) {
     $state = loadServicesState();
 
-    // If not in state, it's not running
+    // If not in state, try to recover from .pid file or process pattern
     if (!isset($state[$projectName])) {
-        return false;
+        $recovered = false;
+
+        // Try .pid file first
+        $pidFile = PID_DIR . '/' . $projectName . '.pid';
+        if (file_exists($pidFile)) {
+            $pid = trim(file_get_contents($pidFile));
+            if ($pid && is_numeric($pid) && file_exists("/proc/$pid")) {
+                markServiceRunning($projectName, (int)$pid);
+                $state = loadServicesState();
+                $recovered = true;
+            }
+        }
+
+        // Try process pattern (pgrep) if pid file didn't work
+        if (!$recovered && !empty($processPattern)) {
+            $escapedPattern = escapeshellarg($processPattern);
+            $pid = trim(shell_exec("pgrep -f $escapedPattern 2>/dev/null | head -1"));
+            if ($pid && is_numeric($pid) && file_exists("/proc/$pid")) {
+                markServiceRunning($projectName, (int)$pid);
+                // Update pid file too
+                file_put_contents(PID_DIR . '/' . $projectName . '.pid', $pid);
+                $state = loadServicesState();
+            }
+        }
+
+        if (!isset($state[$projectName])) {
+            return false;
+        }
     }
 
     $serviceState = $state[$projectName];
@@ -492,7 +536,11 @@ function stopService($projectName) {
 
     // Use stop command if exists
     if (!empty($info['stopCommand'])) {
-        exec('cd ' . escapeshellarg($projectPath) . ' && ' . $info['stopCommand'] . ' 2>&1');
+        $stopCmd = $info['stopCommand'];
+        if (!empty($info['requiresSudo'])) {
+            $stopCmd = 'sudo ' . $stopCmd;
+        }
+        exec('cd ' . escapeshellarg($projectPath) . ' && ' . $stopCmd . ' 2>&1');
         sleep(1);
     }
 
@@ -735,6 +783,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-script' && isAuthenticate
     }
 
     $info = json_decode(file_get_contents($infoFile), true);
+    $requiresSudo = !empty($info['requiresSudo']);
+    $sudoPassword = null;
+
+    if ($requiresSudo) {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $sudoPassword = $input['sudoPassword'] ?? '';
+        if (empty($sudoPassword)) {
+            echo json_encode(['success' => false, 'message' => __('sudo_wrong_password'), 'needsSudoPassword' => true]);
+            exit;
+        }
+        if (!password_verify($sudoPassword, PASSWORD_HASH)) {
+            echo json_encode(['success' => false, 'message' => __('sudo_wrong_password'), 'needsSudoPassword' => true]);
+            exit;
+        }
+        $sudoPassword = true; // validated — only used as flag now
+    }
+
     $startScript = $info['startScript'] ?? null;
     $scriptType = $info['scriptType'] ?? 'bash';
     $port = $info['port'] ?? null;
@@ -913,13 +978,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-script' && isAuthenticate
                 break;
 
             default: // bash
-                $command = sprintf(
-                    'cd %s && nohup bash %s %s >> %s 2>&1 & echo $!',
-                    escapeshellarg($projectPath),
-                    escapeshellarg($scriptFile),
-                    $scriptArgs,
-                    escapeshellarg($logFile)
-                );
+                if ($requiresSudo && $sudoPassword === true) {
+                    $command = sprintf(
+                        'sudo -n %s %s >> %s 2>&1 & echo $!',
+                        escapeshellarg($projectPath . '/' . $scriptFile),
+                        $scriptArgs,
+                        escapeshellarg($logFile)
+                    );
+                } else {
+                    $command = sprintf(
+                        'cd %s && nohup bash %s %s >> %s 2>&1 & echo $!',
+                        escapeshellarg($projectPath),
+                        escapeshellarg($scriptFile),
+                        $scriptArgs,
+                        escapeshellarg($logFile)
+                    );
+                }
                 $pid = trim(shell_exec($command));
         }
 
@@ -1003,6 +1077,82 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-script' && isAuthenticate
         'running' => $isRunning,
         'output' => $logOutput ?: 'Servicio iniciándose...',
         'stoppedServices' => $conflictingServices
+    ]);
+    exit;
+}
+
+// API: Run a project extra action (one-shot script, no service tracking)
+if (isset($_GET['action']) && $_GET['action'] === 'run-action' && isAuthenticated()) {
+    header('Content-Type: application/json');
+
+    $project = $_GET['project'] ?? '';
+    $project = basename($project);
+    $actionId = (int)($_GET['action-id'] ?? 0);
+
+    $projectPath = __DIR__ . '/' . $project;
+    $infoFile = $projectPath . '/.project-info.json';
+
+    if (!is_dir($projectPath) || !file_exists($infoFile)) {
+        echo json_encode(['success' => false, 'message' => __('project_not_found')]);
+        exit;
+    }
+
+    $info = json_decode(file_get_contents($infoFile), true);
+    $extraActions = $info['extraActions'] ?? [];
+
+    if (!isset($extraActions[$actionId])) {
+        echo json_encode(['success' => false, 'message' => 'Acción no encontrada']);
+        exit;
+    }
+
+    $actionConfig = $extraActions[$actionId];
+    $script = $actionConfig['script'] ?? null;
+    $scriptType = $actionConfig['type'] ?? 'bash';
+    $label = $actionConfig['label'] ?? 'Action';
+
+    if (!$script) {
+        echo json_encode(['success' => false, 'message' => 'Script no configurado']);
+        exit;
+    }
+
+    if (!is_dir(LOG_DIR)) mkdir(LOG_DIR, 0755, true);
+    $logFile = LOG_DIR . '/' . $project . '-action-' . $actionId . '.log';
+    file_put_contents($logFile, "=== $label [" . date('Y-m-d H:i:s') . "] ===\n");
+
+    $scriptParts = explode(' ', $script, 2);
+    $scriptFile  = $scriptParts[0];
+    $scriptArgs  = isset($scriptParts[1]) ? $scriptParts[1] : '';
+
+    switch ($scriptType) {
+        case 'python':
+            $command = sprintf(
+                'cd %s && nohup python3 %s %s >> %s 2>&1 & echo $!',
+                escapeshellarg($projectPath), escapeshellarg($scriptFile), $scriptArgs, escapeshellarg($logFile)
+            );
+            break;
+        case 'node':
+            $command = sprintf(
+                'cd %s && nohup node %s %s >> %s 2>&1 & echo $!',
+                escapeshellarg($projectPath), escapeshellarg($scriptFile), $scriptArgs, escapeshellarg($logFile)
+            );
+            break;
+        case 'bash':
+        default:
+            $command = sprintf(
+                'cd %s && nohup bash %s %s >> %s 2>&1 & echo $!',
+                escapeshellarg($projectPath), escapeshellarg($scriptFile), $scriptArgs, escapeshellarg($logFile)
+            );
+            break;
+    }
+
+    $pid = trim(shell_exec($command));
+    $success = !empty($pid) && is_numeric($pid);
+
+    echo json_encode([
+        'success' => $success,
+        'message' => $success
+            ? "$label iniciado. Revisa los logs para ver el progreso."
+            : "Error al iniciar $label",
     ]);
     exit;
 }
@@ -1562,7 +1712,9 @@ function getProjects() {
                 'repoUrl' => null,
                 'type' => 'backend',
                 'technology' => null,
-                'ports' => null
+                'ports' => null,
+                'webApp' => true,
+                'processPattern' => null
             ];
 
             if (file_exists($descFile)) {
@@ -1575,7 +1727,7 @@ function getProjects() {
 
             // Check if running
             if (!empty($projectInfo['startScript'])) {
-                $projectInfo['isRunning'] = isServiceRunning($item);
+                $projectInfo['isRunning'] = isServiceRunning($item, $projectInfo['processPattern'] ?? null);
             }
 
             // Check if Git repository
@@ -1608,7 +1760,7 @@ $runningCount = count(array_filter($projects, fn($p) => $p['isRunning']));
 $currentLang = getCurrentLanguage();
 ?>
 <!DOCTYPE html>
-<html lang="<?php echo $currentLang; ?>">
+<html lang="<?php echo $currentLang; ?>" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1617,6 +1769,13 @@ $currentLang = getCurrentLanguage();
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="alternate icon" href="assets/favicon.svg">
     <link rel="stylesheet" href="assets/style.css">
+    <script>
+        // Apply theme before render to prevent flash
+        (function() {
+            var t = localStorage.getItem('theme');
+            if (t === 'light') document.documentElement.classList.add('light');
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -1645,11 +1804,24 @@ $currentLang = getCurrentLanguage();
                     <button type="submit" class="btn-login"><?php echo __('login'); ?></button>
                 </form>
 
-                <!-- Language Selector -->
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="?lang=en" style="color: #64748b; text-decoration: none; margin: 0 10px; <?php echo getCurrentLanguage() === 'en' ? 'font-weight: bold; color: #3b82f6;' : ''; ?>">English</a>
-                    <span style="color: #64748b;">|</span>
-                    <a href="?lang=es" style="color: #64748b; text-decoration: none; margin: 0 10px; <?php echo getCurrentLanguage() === 'es' ? 'font-weight: bold; color: #3b82f6;' : ''; ?>">Español</a>
+                <!-- Language & Theme -->
+                <div class="login-footer-row">
+                    <a href="?lang=en" class="login-lang-link <?php echo getCurrentLanguage() === 'en' ? 'active' : ''; ?>">English</a>
+                    <span class="sep">|</span>
+                    <a href="?lang=es" class="login-lang-link <?php echo getCurrentLanguage() === 'es' ? 'active' : ''; ?>">Español</a>
+                    <span class="sep">|</span>
+                    <button class="btn-theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                        <svg id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg id="themeIconLight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1659,6 +1831,23 @@ $currentLang = getCurrentLanguage();
         <header class="dashboard-header">
             <h1><?php echo __('site_name'); ?></h1>
             <div class="header-actions">
+                <!-- Theme Toggle -->
+                <button class="btn-theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+                    <svg id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg id="themeIconLight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
                 <!-- Language Selector -->
                 <div class="language-selector">
                     <a href="?lang=en" class="<?php echo getCurrentLanguage() === 'en' ? 'active' : ''; ?>">EN</a>
@@ -1666,7 +1855,7 @@ $currentLang = getCurrentLanguage();
                 </div>
                 <!-- TODO Button -->
                 <button class="btn-header-todo" onclick="openTodoModal(this)" data-project="backend.patchamama.com" title="<?php echo __('edit_todo'); ?>">
-                    TODO
+                    TODO<?php $headerTodoPending = getTodoPendingCount('backend.patchamama.com'); if ($headerTodoPending > 0): ?><span class="todo-pending-badge"><?php echo $headerTodoPending; ?></span><?php endif; ?>
                 </button>
                 <!-- GitHub Button -->
                 <a href="https://github.com/patchamama/desploy-apps-manager"
@@ -1719,6 +1908,7 @@ $currentLang = getCurrentLanguage();
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                     </svg>
+                                    <?php $pendingCount = getTodoPendingCount($project['name']); if ($pendingCount > 0): ?><span class="todo-pending-badge"><?php echo $pendingCount; ?></span><?php endif; ?>
                                 </button>
                                 <?php if ($project['isGitRepo'] && $project['repoUrl']): ?>
                                 <a href="<?php echo htmlspecialchars($project['repoUrl']); ?>"
@@ -1784,6 +1974,7 @@ $currentLang = getCurrentLanguage();
                         </div>
                     </a>
                     <div class="project-actions">
+                        <?php if ($project['webApp'] !== false): ?>
                         <a href="<?php echo htmlspecialchars($project['url']); ?>" class="btn-action btn-open" target="_blank">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -1792,6 +1983,7 @@ $currentLang = getCurrentLanguage();
                             </svg>
                             <?php echo __('open'); ?>
                         </a>
+                        <?php endif; ?>
                         <?php if ($project['startScript']): ?>
                             <?php if ($project['isRunning']): ?>
                             <button class="btn-action btn-stop"
@@ -1802,6 +1994,8 @@ $currentLang = getCurrentLanguage();
                                 </svg>
                                 <?php echo __('stop'); ?>
                             </button>
+                            <?php endif; ?>
+                            <?php if ($project['isRunning'] || $project['webApp'] === false): ?>
                             <button class="btn-action btn-logs"
                                     data-project="<?php echo htmlspecialchars($project['name']); ?>"
                                     onclick="viewLogs(this)">
@@ -1813,9 +2007,11 @@ $currentLang = getCurrentLanguage();
                                 </svg>
                                 <?php echo __('logs'); ?>
                             </button>
-                            <?php else: ?>
+                            <?php endif; ?>
+                            <?php if (!$project['isRunning']): ?>
                             <button class="btn-action btn-start"
                                     data-project="<?php echo htmlspecialchars($project['name']); ?>"
+                                    data-requires-sudo="<?php echo !empty($project['requiresSudo']) ? 'true' : 'false'; ?>"
                                     onclick="runScript(this)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polygon points="5 3 19 12 5 21 5 3"/>
@@ -1823,6 +2019,22 @@ $currentLang = getCurrentLanguage();
                                 <?php echo __('start'); ?>
                             </button>
                             <?php endif; ?>
+                        <?php endif; ?>
+                        <?php if (!empty($project['extraActions']) && is_array($project['extraActions'])): ?>
+                            <?php foreach ($project['extraActions'] as $idx => $action): ?>
+                            <button class="btn-action btn-deploy"
+                                    data-project="<?php echo htmlspecialchars($project['name']); ?>"
+                                    data-action-id="<?php echo (int)$idx; ?>"
+                                    data-action-label="<?php echo htmlspecialchars($action['label'] ?? 'Deploy'); ?>"
+                                    onclick="runAction(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="16 16 12 12 8 16"/>
+                                    <line x1="12" y1="12" x2="12" y2="21"/>
+                                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                                </svg>
+                                <?php echo htmlspecialchars($action['label'] ?? 'Deploy'); ?>
+                            </button>
+                            <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1883,8 +2095,7 @@ $currentLang = getCurrentLanguage();
                 </div>
                 <div class="modal-body">
                     <textarea id="todoTextarea"
-                              placeholder="<?php echo __('todo_placeholder'); ?>"
-                              style="width: 100%; min-height: 300px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: monospace; font-size: 14px; resize: vertical;"></textarea>
+                              placeholder="<?php echo __('todo_placeholder'); ?>"></textarea>
                 </div>
                 <div class="modal-footer">
                     <button class="btn-action" onclick="closeTodoModal()"><?php echo __('close'); ?></button>
@@ -1895,6 +2106,32 @@ $currentLang = getCurrentLanguage();
                             <polyline points="7 3 7 8 15 8"/>
                         </svg>
                         <?php echo __('save'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sudo Password Modal -->
+        <div id="sudoModal" class="modal">
+            <div class="modal-content modal-sm">
+                <div class="modal-header">
+                    <h3><?php echo __('sudo_password_required'); ?></h3>
+                    <button class="modal-close" onclick="closeSudoModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-label"><?php echo __('sudo_password_label'); ?></p>
+                    <input type="password" id="sudoPasswordInput"
+                           placeholder="<?php echo __('sudo_password_placeholder'); ?>"
+                           onkeydown="if(event.key==='Enter') confirmSudoStart()" />
+                    <p id="sudoError"><?php echo __('sudo_wrong_password'); ?></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-action" onclick="closeSudoModal()"><?php echo __('sudo_cancel'); ?></button>
+                    <button class="btn-action btn-primary" onclick="confirmSudoStart()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        <?php echo __('sudo_confirm'); ?>
                     </button>
                 </div>
             </div>
@@ -1937,430 +2174,10 @@ $currentLang = getCurrentLanguage();
         'todo_saved' => __('todo_saved'),
         'edit_todo' => __('edit_todo'),
         'todo_placeholder' => __('todo_placeholder'),
-        'unsaved_changes' => __('unsaved_changes')
+        'unsaved_changes' => __('unsaved_changes'),
+        'sudo_wrong_password' => __('sudo_wrong_password'),
     ], JSON_UNESCAPED_UNICODE); ?>;
-
-    function runScript(button) {
-        const project = button.dataset.project;
-        showModal(i18n.starting_service, true);
-
-        button.disabled = true;
-        button.classList.add('loading');
-
-        fetch(`?action=run-script&project=${encodeURIComponent(project)}`)
-            .then(response => response.json())
-            .then(data => {
-                updateModal(
-                    data.success ? (data.running ? i18n.service_started : i18n.service_starting) : i18n.error,
-                    data.output || data.message,
-                    data.success
-                );
-            })
-            .catch(error => {
-                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
-            })
-            .finally(() => {
-                button.disabled = false;
-                button.classList.remove('loading');
-            });
-    }
-
-    function stopService(button) {
-        const project = button.dataset.project;
-        showModal(i18n.stopping_service, true);
-
-        button.disabled = true;
-
-        fetch(`?action=stop-service&project=${encodeURIComponent(project)}`)
-            .then(response => response.json())
-            .then(data => {
-                updateModal(
-                    data.success ? i18n.service_stopped : i18n.error,
-                    data.message,
-                    data.success
-                );
-            })
-            .catch(error => {
-                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
-            });
-    }
-
-    function stopAllServices() {
-        if (!confirm(i18n.stop_all_confirm)) return;
-
-        showModal(i18n.stopping_all_services, true);
-
-        fetch('?action=stop-all')
-            .then(response => response.json())
-            .then(data => {
-                updateModal(
-                    i18n.services_stopped,
-                    data.message,
-                    data.success
-                );
-            })
-            .catch(error => {
-                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
-            });
-    }
-
-    function viewLogs(button) {
-        const project = button.dataset.project;
-        showModal(i18n.loading_logs, true);
-
-        fetch(`?action=logs&project=${encodeURIComponent(project)}`)
-            .then(response => response.json())
-            .then(data => {
-                updateModal(
-                    i18n.logs + ': ' + project,
-                    data.logs || data.message,
-                    data.success
-                );
-            })
-            .catch(error => {
-                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
-            });
-    }
-
-    function gitPull(button) {
-        const project = button.dataset.project;
-        showModal(i18n.updating_repository, true);
-
-        button.disabled = true;
-        button.classList.add('loading');
-
-        fetch(`?action=git-pull&project=${encodeURIComponent(project)}`)
-            .then(response => response.json())
-            .then(data => {
-                updateModal(
-                    data.success ? i18n.repository_updated : i18n.error,
-                    data.output || data.message,
-                    data.success
-                );
-            })
-            .catch(error => {
-                updateModal(i18n.error, i18n.connection_error + ': ' + error.message, false);
-            })
-            .finally(() => {
-                button.disabled = false;
-                button.classList.remove('loading');
-            });
-    }
-
-    function showModal(title, showLoader) {
-        const modal = document.getElementById('resultModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalLoader = document.getElementById('modalLoader');
-        const modalResult = document.getElementById('modalResult');
-        const modalFooter = document.getElementById('modalFooter');
-
-        modal.classList.add('active');
-        modalTitle.textContent = title;
-        modalLoader.style.display = showLoader ? 'block' : 'none';
-        modalResult.textContent = '';
-        modalResult.className = 'result-output';
-        modalFooter.style.display = 'none';
-    }
-
-    function updateModal(title, content, success) {
-        const modalTitle = document.getElementById('modalTitle');
-        const modalLoader = document.getElementById('modalLoader');
-        const modalResult = document.getElementById('modalResult');
-        const modalFooter = document.getElementById('modalFooter');
-
-        modalLoader.style.display = 'none';
-        modalTitle.textContent = title;
-        modalResult.textContent = content;
-        modalResult.classList.add(success ? 'success' : 'error');
-        modalFooter.style.display = 'flex';
-    }
-
-    function closeModal() {
-        document.getElementById('resultModal').classList.remove('active');
-    }
-
-    function closeModalAndReload() {
-        closeModal();
-        location.reload();
-    }
-
-    document.getElementById('resultModal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            // No cerrar al hacer clic fuera, solo con el botón
-        }
-    });
-
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            // No cerrar con Escape automáticamente
-        }
-    });
-
-    // Funciones para gestión de puertos
-    function showOpenPorts() {
-        const modal = document.getElementById('portsModal');
-        const loader = document.getElementById('portsLoader');
-        const portsList = document.getElementById('portsList');
-
-        modal.classList.add('active');
-        loader.style.display = 'block';
-        portsList.innerHTML = '';
-
-        loadPorts();
-    }
-
-    function loadPorts() {
-        const loader = document.getElementById('portsLoader');
-        const portsList = document.getElementById('portsList');
-
-        fetch('?action=list-ports')
-            .then(response => response.json())
-            .then(data => {
-                loader.style.display = 'none';
-
-                if (!data.success || data.ports.length === 0) {
-                    portsList.innerHTML = '<div class="no-ports">' + i18n.no_open_ports + '</div>';
-                    return;
-                }
-
-                let html = '<table class="ports-table"><thead><tr><th>' + i18n.port + '</th><th>' + i18n.project + '</th><th>' + i18n.application + '</th><th>' + i18n.type + '</th><th>PID</th><th>' + i18n.action + '</th></tr></thead><tbody>';
-
-                data.ports.forEach(port => {
-                    // Generar información del proyecto
-                    let projectInfo = '-';
-                    if (port.projects && port.projects.length > 0) {
-                        projectInfo = port.projects.map(p => {
-                            const tech = p.technology ? `<br><small style="color: #94a3b8;">${p.technology}</small>` : '';
-                            return `<strong>${p.title}</strong>${tech}`;
-                        }).join('<br>');
-                    }
-
-                    html += `
-                        <tr>
-                            <td><strong>${port.port}</strong></td>
-                            <td>${projectInfo}</td>
-                            <td>${port.appName}</td>
-                            <td><span class="app-type-badge">${port.appType}</span></td>
-                            <td>${port.pid || 'N/A'}</td>
-                            <td>
-                                <button class="btn-kill" onclick="killPort(${port.port})" title="${i18n.terminate_process}">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <line x1="15" y1="9" x2="9" y2="15"/>
-                                        <line x1="9" y1="9" x2="15" y2="15"/>
-                                    </svg>
-                                    ${i18n.kill}
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                html += '</tbody></table>';
-                portsList.innerHTML = html;
-            })
-            .catch(error => {
-                loader.style.display = 'none';
-                portsList.innerHTML = '<div class="error-message">' + i18n.error_loading_ports + ': ' + error.message + '</div>';
-            });
-    }
-
-    function refreshPorts() {
-        const portsList = document.getElementById('portsList');
-        const loader = document.getElementById('portsLoader');
-
-        portsList.innerHTML = '';
-        loader.style.display = 'block';
-        loadPorts();
-    }
-
-    function killPort(port) {
-        if (!confirm(i18n.kill_port_confirm + ' ' + port + '?')) {
-            return;
-        }
-
-        const loader = document.getElementById('portsLoader');
-        loader.style.display = 'block';
-
-        fetch(`?action=kill-port&port=${port}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification(data.message, 'success');
-                    setTimeout(() => {
-                        refreshPorts();
-                    }, 1000);
-                } else {
-                    showNotification(data.message, 'error');
-                    loader.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                showNotification('Error: ' + error.message, 'error');
-                loader.style.display = 'none';
-            });
-    }
-
-    function closePortsModal() {
-        document.getElementById('portsModal').classList.remove('active');
-    }
-
-    function showNotification(message, type) {
-        // Crear elemento de notificación
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            background: ${type === 'success' ? '#10b981' : '#ef4444'};
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 10000;
-            animation: slideIn 0.3s ease;
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
-        }, 3000);
-    }
-
-    // Update state cada 30 segundos
-    setInterval(() => {
-        fetch('?action=status')
-            .then(r => r.json())
-            .then(data => {
-                const count = Object.keys(data.services).length;
-                const badge = document.getElementById('runningCount');
-                if (badge) {
-                    badge.querySelector('.count').textContent = count;
-                    badge.classList.toggle('active', count > 0);
-                }
-            });
-    }, 30000);
-
-    // TODO Modal functions
-    let currentTodoProject = null;
-    let originalTodoContent = '';
-
-    function openTodoModal(button) {
-        const project = button.dataset.project;
-        currentTodoProject = project;
-
-        const modal = document.getElementById('todoModal');
-        const projectNameSpan = document.getElementById('todoProjectName');
-        const textarea = document.getElementById('todoTextarea');
-
-        projectNameSpan.textContent = project;
-        textarea.value = '';
-        textarea.disabled = true;
-        originalTodoContent = '';
-
-        modal.classList.add('active');
-
-        // Load TODO content
-        fetch(`?action=get-todo&project=${encodeURIComponent(project)}`)
-            .then(response => response.json())
-            .then(data => {
-                const content = (data && data.success && data.todo) ? data.todo : '';
-                textarea.value = content;
-                originalTodoContent = content;
-                textarea.disabled = false;
-                textarea.focus();
-            })
-            .catch(error => {
-                console.error('Error loading TODO:', error);
-                textarea.value = '';
-                originalTodoContent = '';
-                textarea.disabled = false;
-            });
-    }
-
-    function hasUnsavedChanges() {
-        const textarea = document.getElementById('todoTextarea');
-        if (!textarea) return false;
-
-        const currentContent = String(textarea.value);
-        const original = String(originalTodoContent);
-
-        return currentContent !== original;
-    }
-
-    function closeTodoModal() {
-        if (hasUnsavedChanges()) {
-            if (!confirm(i18n.unsaved_changes)) {
-                return;
-            }
-        }
-
-        const modal = document.getElementById('todoModal');
-        const maximizeBtn = document.querySelector('.modal-maximize');
-        modal.classList.remove('active');
-        modal.classList.remove('maximized');
-        if (maximizeBtn) {
-            maximizeBtn.textContent = '+';
-        }
-        currentTodoProject = null;
-        originalTodoContent = '';
-    }
-
-    function toggleMaximizeTodoModal() {
-        const modal = document.getElementById('todoModal');
-        const maximizeBtn = document.querySelector('.modal-maximize');
-        if (modal) {
-            modal.classList.toggle('maximized');
-            // Change button text based on state
-            if (modal.classList.contains('maximized')) {
-                maximizeBtn.textContent = '−';
-            } else {
-                maximizeBtn.textContent = '+';
-            }
-        }
-    }
-
-    function saveTodo() {
-        if (!currentTodoProject) return;
-
-        const textarea = document.getElementById('todoTextarea');
-        const content = textarea.value;
-
-        const formData = new FormData();
-        formData.append('project', currentTodoProject);
-        formData.append('content', content);
-
-        fetch('?action=save-todo', {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification(i18n.todo_saved, 'success');
-                    // Update original content after successful save
-                    originalTodoContent = content;
-                } else {
-                    showNotification(data.message || i18n.error, 'error');
-                }
-            })
-            .catch(error => {
-                showNotification(i18n.error + ': ' + error.message, 'error');
-            });
-    }
-
-    // Close TODO modal with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.getElementById('todoModal').classList.contains('active')) {
-            closeTodoModal();
-        }
-    });
     </script>
+    <script src="assets/app.js"></script>
 </body>
 </html>

@@ -15,6 +15,48 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
 }
 
+/* Light mode */
+:root.light {
+    --bg-color: #f1f5f9;
+    --bg-secondary: #ffffff;
+    --card-bg: #ffffff;
+    --card-hover: #f8fafc;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #cbd5e1;
+    --error-color: #dc2626;
+    --success-color: #16a34a;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+}
+
+/* Theme toggle button */
+.btn-theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-theme-toggle:hover {
+    background: var(--card-hover);
+    color: var(--text-primary);
+}
+
+.btn-theme-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -235,7 +277,7 @@ body {
     justify-content: center;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+    background: linear-gradient(135deg, var(--card-hover) 0%, var(--bg-color) 100%);
     color: var(--text-secondary);
 }
 
@@ -430,6 +472,24 @@ body {
     background: var(--text-secondary);
 }
 
+.btn-deploy {
+    background: #0284c7;
+    color: white;
+}
+
+.btn-deploy:hover {
+    background: #0369a1;
+}
+
+.btn-deploy:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-deploy.loading {
+    background: var(--text-secondary);
+}
+
 /* Modal */
 .modal {
     display: none;
@@ -527,8 +587,8 @@ body {
 }
 
 .modal.maximized #todoTextarea {
-    min-height: calc(100vh - 160px);
-    height: calc(100vh - 160px);
+    min-height: 0;
+    height: calc(100vh - 180px);
 }
 
 .modal.maximized .modal-footer {
@@ -668,12 +728,12 @@ body {
     0%, 100% {
         opacity: 1;
         transform: scale(1);
-        background: white;
+        background: var(--success-color);
     }
     50% {
         opacity: 0.3;
         transform: scale(1.3);
-        background: #1e293b;
+        background: var(--bg-secondary);
     }
 }
 
@@ -823,18 +883,42 @@ body {
 }
 
 .btn-git-todo {
-    background: rgba(147, 51, 234, 0.9);
+    background: rgba(30, 41, 59, 0.9);
+    position: relative;
 }
 
 .btn-git-todo:hover {
-    background: rgba(126, 34, 206, 0.95);
-    color: #f0f6fc;
+    background: rgba(51, 65, 85, 0.95);
+    color: var(--text-primary);
+}
+
+/* TODO Pending Badge */
+.todo-pending-badge {
+    position: absolute;
+    top: -8px;
+    right: -6px;
+    background: #ef4444;
+    color: #ffffff;
+    border-radius: 50%;
+    min-width: 12px;
+    height: 12px;
+    padding: 0 2px;
+    font-size: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    pointer-events: none;
+    text-shadow: none;
+    box-sizing: border-box;
+    vertical-align: super;
 }
 
 /* Header TODO Button */
 .btn-header-todo {
     padding: 8px 14px;
-    background: rgba(147, 51, 234, 1);
+    background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 6px;
@@ -842,10 +926,11 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    position: relative;
 }
 
 .btn-header-todo:hover {
-    background: rgba(126, 34, 206, 1);
+    background: var(--primary-hover);
 }
 
 /* Header GitHub Button */
@@ -1049,11 +1134,11 @@ body {
 
 /* Frontend/Backend Project Styles */
 .default-image.frontend {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
 }
 
 .default-image.backend {
-    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+    background: linear-gradient(135deg, var(--card-hover) 0%, var(--bg-color) 100%);
 }
 
 /* Notification Animations */
@@ -1123,4 +1208,186 @@ body {
         padding: 6px 10px;
         font-size: 0.75rem;
     }
+}
+
+/* ─── Login footer row (language + theme toggle) ─── */
+.login-footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.login-lang-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+}
+
+.login-lang-link:hover {
+    color: var(--text-primary);
+}
+
+.login-lang-link.active {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.sep {
+    color: var(--border-color);
+    user-select: none;
+}
+
+/* ─── TODO Modal ─── */
+#todoModal .modal-content {
+    max-height: 88vh;
+}
+
+#todoModal .modal-body {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(88vh - 120px);
+    padding: 16px;
+}
+
+#todoTextarea {
+    flex: 1;
+    width: 100%;
+    min-height: 420px;
+    height: calc(88vh - 200px);
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    resize: vertical;
+    background: var(--bg-color);
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#todoTextarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* ─── Small modal ─── */
+.modal-sm {
+    max-width: 420px;
+}
+
+/* ─── Sudo modal inputs ─── */
+.modal-label {
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+#sudoPasswordInput {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: var(--bg-color);
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+#sudoPasswordInput:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+#sudoError {
+    display: none;
+    color: var(--error-color);
+    font-size: 0.8125rem;
+    margin-top: 8px;
+}
+
+/* ─── Utility ─── */
+.text-muted {
+    color: var(--text-secondary);
+}
+
+/* ─── Light mode overrides ─── */
+
+/* Badges: los colores base son para modo oscuro, en claro necesitan variantes más oscuras */
+:root.light .tech-badge {
+    background: rgba(37, 99, 235, 0.08);
+    color: #1d4ed8;
+    border-color: rgba(37, 99, 235, 0.25);
+}
+
+:root.light .project-card:hover .tech-badge {
+    background: rgba(37, 99, 235, 0.14);
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+:root.light .port-badge {
+    background: rgba(22, 163, 74, 0.08);
+    color: #15803d;
+    border-color: rgba(22, 163, 74, 0.25);
+}
+
+:root.light .project-card:hover .port-badge {
+    background: rgba(22, 163, 74, 0.14);
+    border-color: rgba(22, 163, 74, 0.4);
+}
+
+/* Botones de hover para stop-all y kill: el hover #dc2626 ya era el color base, usar uno más oscuro */
+:root.light .btn-stop-all:hover {
+    background: #b91c1c;
+}
+
+:root.light .btn-kill:hover {
+    background: #b91c1c;
+}
+
+/* Card hover: borde más visible en modo claro */
+:root.light .project-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+}
+
+/* Input focus ring: ajustado para modo claro */
+:root.light .form-group input:focus,
+:root.light #sudoPasswordInput:focus,
+:root.light #todoTextarea:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+/* Btn-start hover: más oscuro para que contraste con el verde más oscuro */
+:root.light .btn-start:hover {
+    background: #15803d;
+}
+
+/* App-type badge en tabla de puertos */
+:root.light .app-type-badge {
+    background: #1d4ed8;
+}
+
+/* Resultado de operaciones: fondo más contrastado */
+:root.light .result-output {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+}
+
+/* Imagen por defecto de proyectos backend: visible en claro */
+:root.light .default-image.backend {
+    background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+}
+
+:root.light .default-image.backend svg,
+:root.light .default-image.backend span {
+    color: #475569;
+    opacity: 1;
 }
