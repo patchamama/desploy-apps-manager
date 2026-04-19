@@ -1,8 +1,6 @@
 # Ignore folders containing git repositories
 Chess-API-Example/
 elo_log_viewer/
-maestro-organizator-app/
-MVP-LogistiQ/
 
 # Existing project folders (except assets for CSS/JS)
 AIOnMail/
@@ -47,3 +45,7 @@ env/
 # OS specific
 Thumbs.db
 .directory
+.github-config.json
+.github-config.json
+.project-info.json-temp
+.services-state.json
