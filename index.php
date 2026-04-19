@@ -1664,6 +1664,46 @@ if (isset($_GET['action']) && $_GET['action'] === 'save-todo' && isAuthenticated
     exit;
 }
 
+// API: Server stats
+if (isset($_GET['action']) && $_GET['action'] === 'server-stats' && isAuthenticated()) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true] + getServerStats());
+    exit;
+}
+
+// API: Kill process by PID
+if (isset($_GET['action']) && $_GET['action'] === 'kill-pid' && isAuthenticated()) {
+    header('Content-Type: application/json');
+    $pid = $_GET['pid'] ?? '';
+    if (!is_numeric($pid) || (int)$pid < 2) { echo json_encode(['success' => false, 'message' => 'Invalid PID']); exit; }
+    exec("kill $pid 2>/dev/null");
+    usleep(350000);
+    if (file_exists("/proc/$pid")) exec("kill -9 $pid 2>/dev/null");
+    echo json_encode(['success' => true, 'message' => "Process $pid terminated"]);
+    exit;
+}
+
+// API: Auto-detect projects without .project-info.json
+if (isset($_GET['action']) && $_GET['action'] === 'autodetect-projects' && isAuthenticated()) {
+    header('Content-Type: application/json');
+    $detected = [];
+    $exclude = ['.','..','assets','node_modules','vendor','.git','.claude','.pids','.logs','.todos','.venv','calibre'];
+    foreach (scandir(__DIR__) as $item) {
+        if (!is_dir(__DIR__."/$item") || in_array($item, $exclude) || $item[0] === '.') continue;
+        $projectPath = __DIR__."/$item";
+        if (file_exists("$projectPath/.project-info.json")) continue;
+        $tech = detectProjectTech($projectPath);
+        if (!$tech) continue;
+        $info = buildProjectJson($item, $tech);
+        file_put_contents("$projectPath/.project-info.json", json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        $startPath = "$projectPath/start.sh";
+        if (!file_exists($startPath)) { file_put_contents($startPath, buildStartSh($tech)); chmod($startPath, 0755); }
+        $detected[] = $item;
+    }
+    echo json_encode(['success' => true, 'detected' => $detected, 'count' => count($detected)]);
+    exit;
+}
+
 // Process login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
     if (password_verify($_POST['password'], PASSWORD_HASH)) {
@@ -1684,6 +1724,142 @@ if (isset($_GET['logout'])) {
 // Update last activity
 if (isAuthenticated()) {
     $_SESSION['last_activity'] = time();
+}
+
+// ─── Server Stats helpers ──────────────────────────────────────────────────────
+
+function getServerStats() {
+    // RAM — via `free -b` (open_basedir blocks file('/proc/meminfo'))
+    $ramTotal = $ramUsed = 0;
+    $freeOut = shell_exec('free -b 2>/dev/null');
+    if ($freeOut) {
+        $lines = array_values(array_filter(explode("\n", $freeOut)));
+        if (isset($lines[1])) {
+            $p = preg_split('/\s+/', trim($lines[1]));
+            $ramTotal = (int)($p[1] ?? 0);
+            $ramUsed  = $ramTotal - (int)($p[6] ?? 0); // total - available
+        }
+    }
+
+    // Disk — via `df -B1 /` (disk_total_space blocked by open_basedir)
+    $diskTotal = $diskUsed = 0;
+    $dfOut = shell_exec('df -B1 / 2>/dev/null');
+    if ($dfOut) {
+        $lines = array_values(array_filter(explode("\n", $dfOut)));
+        if (isset($lines[1])) {
+            $p = preg_split('/\s+/', trim($lines[1]));
+            $diskTotal = (int)($p[1] ?? 0);
+            $diskUsed  = (int)($p[2] ?? 0);
+        }
+    }
+
+    // Inodes
+    $inodesTotal = $inodesUsed = 0;
+    $dfInode = shell_exec("df -i / 2>/dev/null | awk 'NR==2{print \$2,\$3}'");
+    if ($dfInode) { $p = explode(' ', trim($dfInode)); $inodesTotal = (int)($p[0] ?? 0); $inodesUsed = (int)($p[1] ?? 0); }
+
+    // Top processes
+    $ps = shell_exec("ps aux --no-headers --sort=-%cpu 2>/dev/null | head -25") ?: '';
+    $processes = [];
+    foreach (explode("\n", trim($ps)) as $line) {
+        if (empty(trim($line))) continue;
+        $p = preg_split('/\s+/', trim($line), 11);
+        if (count($p) >= 11) $processes[] = ['user' => $p[0], 'pid' => $p[1], 'cpu' => $p[2], 'mem' => $p[3], 'command' => mb_strimwidth($p[10], 0, 80, '…')];
+    }
+
+    // Technologies
+    $techChecks = [
+        'PHP'        => 'php -r "echo PHP_VERSION;" 2>/dev/null',
+        'Python'     => 'python3 --version 2>/dev/null',
+        'Node.js'    => 'node --version 2>/dev/null',
+        'Go'         => 'go version 2>/dev/null',
+        'Java'       => 'java -version 2>&1 | head -1',
+        'MySQL'      => 'mysql --version 2>/dev/null',
+        'PostgreSQL' => 'psql --version 2>/dev/null',
+        'Docker'     => 'docker --version 2>/dev/null',
+        'Git'        => 'git --version 2>/dev/null',
+        'Nginx'      => 'nginx -v 2>&1',
+        'Apache'     => 'apache2 -v 2>&1 | head -1',
+        'Redis'      => 'redis-server --version 2>/dev/null',
+    ];
+    $techs = [];
+    foreach ($techChecks as $name => $cmd) {
+        $out = trim(shell_exec($cmd) ?: '');
+        if (!empty($out)) {
+            preg_match('/\d+\.\d+\.?\d*/u', $out, $vm);
+            $techs[] = ['name' => $name, 'version' => $vm[0] ?? '?'];
+        }
+    }
+    // NVIDIA GPU
+    $gpuOut = trim(shell_exec('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null') ?: '');
+    if (!empty($gpuOut)) $techs[] = ['name' => 'NVIDIA GPU', 'version' => $gpuOut];
+
+    // Docker containers
+    $docker = [];
+    $dcRaw = trim(shell_exec('docker ps --format "{{.Names}}|{{.Status}}|{{.Image}}" 2>/dev/null') ?: '');
+    if (!empty($dcRaw)) {
+        foreach (explode("\n", $dcRaw) as $line) {
+            $p = explode('|', $line, 3);
+            if (count($p) === 3) $docker[] = ['name' => $p[0], 'status' => $p[1], 'image' => $p[2]];
+        }
+    }
+
+    return ['ram' => ['total' => $ramTotal, 'used' => $ramUsed], 'disk' => ['total' => $diskTotal, 'used' => $diskUsed], 'inodes' => ['total' => $inodesTotal, 'used' => $inodesUsed], 'processes' => $processes, 'techs' => $techs, 'docker' => $docker];
+}
+
+// ─── Auto-detect project technology ───────────────────────────────────────────
+
+function detectProjectTech($path) {
+    $files = array_flip(scandir($path));
+    if (isset($files['manage.py']))     return ['type'=>'python','fw'=>'Django','entry'=>'manage.py','port'=>8000,'tech'=>'Python + Django'];
+    if (isset($files['run.py'])) {
+        $c = file_get_contents("$path/run.py");
+        $fw = (stripos($c,'fastapi')!==false) ? 'FastAPI' : 'Flask';
+        return ['type'=>'python','fw'=>$fw,'entry'=>'run.py','port'=>8000,'tech'=>"Python + $fw"];
+    }
+    if (isset($files['app.py']))        return ['type'=>'python','fw'=>'Flask','entry'=>'app.py','port'=>8000,'tech'=>'Python + Flask'];
+    if (isset($files['main.py']))       return ['type'=>'python','fw'=>'Python','entry'=>'main.py','port'=>8000,'tech'=>'Python'];
+    if (isset($files['go.mod']) || isset($files['main.go'])) return ['type'=>'go','fw'=>'Go','entry'=>'main.go','port'=>8080,'tech'=>'Go'];
+    if (isset($files['package.json']))  return ['type'=>'node','fw'=>'Node.js','entry'=>'package.json','port'=>3000,'tech'=>'Node.js'];
+    if (isset($files['pom.xml']))       return ['type'=>'java','fw'=>'Java/Maven','entry'=>'pom.xml','port'=>8080,'tech'=>'Java + Maven'];
+    if (isset($files['build.gradle']))  return ['type'=>'java','fw'=>'Java/Gradle','entry'=>'build.gradle','port'=>8080,'tech'=>'Java + Gradle'];
+    if (isset($files['index.php']))     return ['type'=>'php','fw'=>'PHP','entry'=>'index.php','port'=>80,'tech'=>'PHP'];
+    return null;
+}
+
+function buildProjectJson($name, $tech) {
+    return ['name'=>$name,'title'=>ucwords(str_replace(['-','_'],' ',$name)),'description'=>'Auto-detected '.$tech['fw'].' project.','image'=>null,'startScript'=>'start.sh','startLabel'=>'Start '.$tech['fw'],'scriptType'=>'bash','port'=>$tech['port'],'processPattern'=>$tech['entry'],'type'=>'backend','technology'=>$tech['tech'],'webApp'=>true,'requiresSudo'=>false];
+}
+
+function buildStartSh($tech) {
+    $run = match($tech['type']) {
+        'python' => match($tech['entry']) { 'manage.py' => 'python manage.py runserver 0.0.0.0:8000', 'run.py' => 'python run.py', default => 'python '.$tech['entry'] },
+        'go'     => 'go run .',
+        'node'   => 'npm install && npm start',
+        default  => 'echo "Configure this start script."',
+    };
+    $venvBlock = $tech['type'] === 'python' ? <<<'VENV'
+
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+VENV_DIR="$PROJECT_ROOT/.venv"
+
+if [ ! -f "$VENV_DIR/bin/activate" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+source "$VENV_DIR/bin/activate"
+
+REQS="$SCRIPT_DIR/requirements.txt"
+HASH_FILE="$VENV_DIR/.deps_$(basename "$SCRIPT_DIR")"
+_hash=$(md5sum "$REQS" 2>/dev/null | cut -d' ' -f1)
+if [ "$(cat "$HASH_FILE" 2>/dev/null)" != "$_hash" ]; then
+    pip install --quiet --upgrade pip
+    pip install --quiet -r "$REQS"
+    echo "$_hash" > "$HASH_FILE"
+fi
+
+VENV
+    : '';
+    return "#!/usr/bin/env bash\nset -e\nSCRIPT_DIR=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")\" && pwd)\"\n$venvBlock\ncd \"\$SCRIPT_DIR\" && $run\n";
 }
 
 // Get projects list
@@ -1875,6 +2051,7 @@ $currentLang = getCurrentLanguage();
                     </svg>
                     <?php echo __('ports'); ?>
                 </button>
+                <button class="btn-server-action" onclick="autodetectProjects(this)" title="Scan for new projects without config">⊕ Scan</button>
                 <button class="btn-stop-all" onclick="stopAllServices()" title="<?php echo __('stop_all_services'); ?>">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -2136,6 +2313,48 @@ $currentLang = getCurrentLanguage();
                 </div>
             </div>
         </div>
+
+        <!-- Server Panel -->
+        <section class="server-panel" id="serverPanel">
+            <div class="server-panel-header">
+                <h2>Server</h2>
+                <div class="server-panel-actions">
+                    <button class="btn-server-action" onclick="refreshServerStats()">↻ Refresh</button>
+                </div>
+            </div>
+
+            <div class="server-metrics">
+                <div class="metric-card">
+                    <span class="metric-name">RAM</span>
+                    <div class="metric-bar-wrap"><div class="metric-bar-fill" id="ramFill"></div></div>
+                    <span class="metric-stat" id="ramStat">—</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-name">Disk</span>
+                    <div class="metric-bar-wrap"><div class="metric-bar-fill" id="diskFill"></div></div>
+                    <span class="metric-stat" id="diskStat">—</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-name">Inodes</span>
+                    <div class="metric-bar-wrap"><div class="metric-bar-fill" id="inodesFill"></div></div>
+                    <span class="metric-stat" id="inodesStat">—</span>
+                </div>
+            </div>
+
+            <div class="server-tech-grid" id="serverTechs">
+                <div class="server-loading">Loading…</div>
+            </div>
+
+            <div class="server-docker" id="serverDocker"></div>
+
+            <div>
+                <div class="server-proc-header">
+                    <h3>Top Processes</h3>
+                    <small id="procRefreshHint">auto-refresh 15s</small>
+                </div>
+                <div id="processTable"><div class="server-loading">Loading…</div></div>
+            </div>
+        </section>
 
         <footer class="dashboard-footer">
             <p><?php echo count($projects) . ' ' . __('projects_available'); ?></p>

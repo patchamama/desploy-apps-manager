@@ -339,9 +339,9 @@ body {
 }
 
 .tech-badge {
-    background: rgba(37, 99, 235, 0.15);
-    color: #60a5fa;
-    border: 1px solid rgba(96, 165, 250, 0.3);
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .tech-badge svg {
@@ -350,9 +350,9 @@ body {
 }
 
 .port-badge {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
-    border: 1px solid rgba(74, 222, 128, 0.3);
+    background: rgba(22, 163, 74, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(22, 163, 74, 0.2);
 }
 
 .port-badge svg {
@@ -361,13 +361,13 @@ body {
 }
 
 .project-card:hover .tech-badge {
-    background: rgba(37, 99, 235, 0.25);
-    border-color: rgba(96, 165, 250, 0.5);
+    background: rgba(37, 99, 235, 0.18);
+    border-color: rgba(37, 99, 235, 0.4);
 }
 
 .project-card:hover .port-badge {
-    background: rgba(34, 197, 94, 0.25);
-    border-color: rgba(74, 222, 128, 0.5);
+    background: rgba(22, 163, 74, 0.18);
+    border-color: rgba(22, 163, 74, 0.4);
 }
 
 /* Footer */
@@ -473,12 +473,14 @@ body {
 }
 
 .btn-deploy {
-    background: #0284c7;
+    background: var(--primary-color);
     color: white;
+    opacity: 0.85;
 }
 
 .btn-deploy:hover {
-    background: #0369a1;
+    background: var(--primary-color);
+    opacity: 1;
 }
 
 .btn-deploy:disabled {
@@ -582,13 +584,13 @@ body {
 }
 
 .modal.maximized .modal-body {
-    max-height: calc(100vh - 120px);
+    max-height: none;
     padding: 15px;
 }
 
 .modal.maximized #todoTextarea {
     min-height: 0;
-    height: calc(100vh - 180px);
+    height: auto;
 }
 
 .modal.maximized .modal-footer {
@@ -949,8 +951,8 @@ body {
 
 .btn-header-github:hover {
     background: var(--card-hover);
-    color: #f0f6fc;
-    border-color: #f0f6fc;
+    color: var(--text-primary);
+    border-color: var(--border-color);
 }
 
 /* Language Selector */
@@ -1243,28 +1245,36 @@ body {
 
 /* ─── TODO Modal ─── */
 #todoModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    height: min(88vh, 900px);
     max-height: 88vh;
 }
 
+#todoModal .modal-header {
+    flex-shrink: 0;
+}
+
 #todoModal .modal-body {
+    flex: 1;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: calc(88vh - 120px);
+    max-height: none;
     padding: 16px;
 }
 
 #todoTextarea {
     flex: 1;
+    min-height: 0;
     width: 100%;
-    min-height: 420px;
-    height: calc(88vh - 200px);
     padding: 15px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 0.875rem;
     line-height: 1.6;
-    resize: vertical;
+    resize: none;
     background: var(--bg-color);
     color: var(--text-primary);
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -1320,27 +1330,15 @@ body {
 
 /* ─── Light mode overrides ─── */
 
-/* Badges: los colores base son para modo oscuro, en claro necesitan variantes más oscuras */
+/* Badges light mode: same variables, shadows just slightly stronger */
 :root.light .tech-badge {
-    background: rgba(37, 99, 235, 0.08);
-    color: #1d4ed8;
-    border-color: rgba(37, 99, 235, 0.25);
-}
-
-:root.light .project-card:hover .tech-badge {
-    background: rgba(37, 99, 235, 0.14);
-    border-color: rgba(37, 99, 235, 0.4);
+    background: rgba(37, 99, 235, 0.07);
+    border-color: rgba(37, 99, 235, 0.2);
 }
 
 :root.light .port-badge {
-    background: rgba(22, 163, 74, 0.08);
-    color: #15803d;
-    border-color: rgba(22, 163, 74, 0.25);
-}
-
-:root.light .project-card:hover .port-badge {
-    background: rgba(22, 163, 74, 0.14);
-    border-color: rgba(22, 163, 74, 0.4);
+    background: rgba(22, 163, 74, 0.07);
+    border-color: rgba(22, 163, 74, 0.2);
 }
 
 /* Botones de hover para stop-all y kill: el hover #dc2626 ya era el color base, usar uno más oscuro */
@@ -1390,4 +1388,251 @@ body {
 :root.light .default-image.backend span {
     color: #475569;
     opacity: 1;
+}
+
+/* ─── Server Panel ───────────────────────────────────────────────────────────── */
+.server-panel {
+    margin-top: 32px;
+    padding: 24px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.server-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.server-panel-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.server-panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-server-action {
+    padding: 5px 12px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-server-action:hover {
+    background: var(--card-hover);
+    color: var(--text-primary);
+}
+
+/* Metrics */
+.server-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.metric-name {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-secondary);
+}
+
+.metric-bar-wrap {
+    width: 100%;
+    height: 5px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.metric-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--primary-color);
+    transition: width 0.6s ease;
+    width: 0%;
+}
+
+.metric-bar-fill.warn  { background: #f59e0b; }
+.metric-bar-fill.danger { background: var(--error-color); }
+
+.metric-stat {
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Tech chips */
+.server-tech-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 20px;
+    min-height: 28px;
+}
+
+.tech-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.tech-chip strong { color: var(--text-primary); }
+
+/* Docker containers */
+.server-docker { margin-bottom: 20px; }
+.server-docker:empty { display: none; }
+
+.server-docker-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+.docker-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    margin-bottom: 5px;
+}
+
+.docker-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success-color);
+    flex-shrink: 0;
+}
+
+.docker-name { font-weight: 600; color: var(--text-primary); }
+.docker-image { color: var(--text-secondary); font-size: 0.75rem; }
+.docker-status { margin-left: auto; color: var(--text-secondary); font-size: 0.75rem; }
+
+/* Processes */
+.server-proc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.server-proc-header h3 {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.server-proc-header small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.process-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.process-table th {
+    text-align: left;
+    padding: 5px 8px;
+    color: var(--text-secondary);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.process-table td {
+    padding: 5px 8px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.process-table tr:last-child td { border-bottom: none; }
+.process-table tr:hover td { background: var(--card-hover); }
+
+.process-cmd {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.btn-kill-pid {
+    padding: 2px 8px;
+    background: transparent;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.7;
+}
+
+.btn-kill-pid:hover {
+    background: var(--error-color);
+    color: white;
+    opacity: 1;
+}
+
+.server-loading {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    padding: 12px;
+    text-align: center;
+    opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+    .server-metrics { grid-template-columns: 1fr; }
+    .server-panel { padding: 16px; }
+    .process-cmd { max-width: 140px; }
 }

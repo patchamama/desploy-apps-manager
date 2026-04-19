@@ -1,0 +1,23 @@
+
+Usuario demo: demo@maestro.app / demo123 
+ 
+- En el menú y panel de control aparecen los enlaces u opciones subrayadas cuando se pone el mouse encima de estas, deseo que no salgan esos subrayados. 
+ 
+- Puedes integrar las opciones ya existentes como la de mostrar los estudiantes, mostrar la opción de configuración. El icono de                
+  claro/oscuro no se muestra. También agrega otra vez la opción de agregar estudiantes.  El pomodoro, estuvo antes pogramado pero no aparece ahora en el menú. Agregar opción de regenerar(sincronizar estructura de carpetas que se mostrarán en el menú archivos y consiste en actualizar los alumnos en esta estructura faltantes. Sí no hay en el perfil del profesor ninguna asignatura, no se genera, como demo agregar en la base de datos las asignaturas de "Deporte" y "Español" relacionadas al profesor demo para poder testear la aplicación. 
+  
+  
+Genera una estructura de carpetas dentro de la carpeta storage del proyecto que contenga la estructura. Usa como ejemplo el profesor demo, asignaturas definidas, y alumnos por asignaturas ya existentes en la base de datos. Genera algún archivo de excel de ejemplo o word:
+
+Profesor 1 > 
+	Asignatura 1 
+		> Alumno 1
+		> Alumno 2
+			> Calificaciones
+				> Registro documento excel 2026 (autogenerado a partir de la base de datos el tab "base de datos")
+			> Incidencias
+				> Registro documento excel 2026 con fechas, ... y autogenerado a partir de base de datos.
+			> Reuniones
+				> Documento word con notas de reuniones y temas hablados con padres o alumno
+		
+		

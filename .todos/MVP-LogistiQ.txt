@@ -1,0 +1,21 @@
+- Solucionar problema con el nombre del operador que no se rellena automáticamente en el 3er paso
+
+- Rehacer todo el UX/UI
+
+- Quitar todos los OCR del paso 1 y dejar solo OpenAI Vision
+
+- Agregar mapa del lugar para elegir en qué lugar se va a dejar el producto y agregar esta posición en el json
+
+- En settings agregar opción de poner manualmente el endpoint del backend y guardar esta información en el localstorage
+
+- Junto con la URL de la aplicación a abrir, deseo que se ponga la URL de la aplicación y que también ahí se ponga un parámetro con la url del backend, también al generar la aplicación  el QR deseo que se incluya este parámetro junto con la URL del backend ahí
+
+- Mostrar los logs (guardarlos en el localstorage con los logs de errores de los últimos 5 días)
+
+- Limpiar github y dejar lo imprescindible, dejando solo el frontend y el minibackend (renombrar minibackend por backend) y eliminar todos los markdowns y dejar lo mínimo imprescindible.
+
+- Revisar la parte del envío de la key de la api de openAI del backend al frontend
+
+- Pedir a cliente, key de openAI para su uso 
+
+- Buscar ideas o esquemas de posibles UI/UX amigables para este tipo de aplicación en el contexto de almacenes que sea sencillo y amigable. 

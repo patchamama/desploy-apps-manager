@@ -4,6 +4,12 @@ elo_log_viewer/
 maestro-organizator-app/
 MVP-LogistiQ/
 
+# Existing project folders (except assets for CSS/JS)
+AIOnMail/
+calibre/
+ejercicios-didacticos/
+Vocabox-Phase6-learning-languages/
+
 # System and editor files
 .DS_Store
 .vscode/
@@ -15,6 +21,10 @@ MVP-LogistiQ/
 .classpath
 .c9/
 *.log
+.claude/
+.pids/
+.well-known/
+.github/
 
 # Dependency folders
 node_modules/
@@ -33,9 +43,6 @@ env/
 .temp/
 *.tmp
 *.cache
-
-# TODO files (sensitive data)
-.todos/
 
 # OS specific
 Thumbs.db

@@ -448,6 +448,111 @@ function saveTodo() {
         });
 }
 
+// ─── Server Stats ─────────────────────────────────────────────────────────────
+
+function _fmtBytes(b) {
+    if (!b) return '0 B';
+    const u = ['B','KB','MB','GB','TB'], i = Math.min(Math.floor(Math.log(b) / Math.log(1024)), 4);
+    return (b / Math.pow(1024, i)).toFixed(1) + ' ' + u[i];
+}
+
+function _fmtCount(n) {
+    if (n >= 1e9) return (n/1e9).toFixed(1)+'B';
+    if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
+    if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+    return n;
+}
+
+function _setBar(fillId, statText, used, total) {
+    const pct = total > 0 ? Math.round((used / total) * 100) : 0;
+    const fill = document.getElementById(fillId);
+    if (fill) {
+        fill.style.width = pct + '%';
+        fill.className = 'metric-bar-fill' + (pct > 90 ? ' danger' : pct > 70 ? ' warn' : '');
+    }
+    return pct;
+}
+
+function loadServerStats() {
+    fetch('?action=server-stats')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) return;
+
+            // Metrics
+            const ramPct = _setBar('ramFill', '', d.ram.used, d.ram.total);
+            const el = id => document.getElementById(id);
+            if (el('ramStat'))    el('ramStat').textContent    = _fmtBytes(d.ram.used) + ' / ' + _fmtBytes(d.ram.total) + ' (' + ramPct + '%)';
+            const diskPct = _setBar('diskFill', '', d.disk.used, d.disk.total);
+            if (el('diskStat'))   el('diskStat').textContent   = _fmtBytes(d.disk.used) + ' / ' + _fmtBytes(d.disk.total) + ' (' + diskPct + '%)';
+            const inPct = _setBar('inodesFill', '', d.inodes.used, d.inodes.total);
+            if (el('inodesStat')) el('inodesStat').textContent = _fmtCount(d.inodes.used) + ' / ' + _fmtCount(d.inodes.total) + ' (' + inPct + '%)';
+
+            // Tech chips
+            const techsEl = el('serverTechs');
+            if (techsEl) {
+                techsEl.innerHTML = d.techs && d.techs.length
+                    ? d.techs.map(t => `<div class="tech-chip"><strong>${t.name}</strong>&nbsp;<span>${t.version}</span></div>`).join('')
+                    : '<span class="server-loading">—</span>';
+            }
+
+            // Docker
+            const dockerEl = el('serverDocker');
+            if (dockerEl) {
+                dockerEl.innerHTML = d.docker && d.docker.length
+                    ? '<div class="server-docker-title">Docker Containers</div>' +
+                      d.docker.map(c => `<div class="docker-container"><span class="docker-dot"></span><span class="docker-name">${c.name}</span><span class="docker-image">${c.image}</span><span class="docker-status">${c.status}</span></div>`).join('')
+                    : '';
+            }
+
+            // Processes
+            const procEl = el('processTable');
+            if (procEl) {
+                procEl.innerHTML = d.processes && d.processes.length
+                    ? `<table class="process-table"><thead><tr><th>PID</th><th>User</th><th>%CPU</th><th>%MEM</th><th>Command</th><th></th></tr></thead><tbody>` +
+                      d.processes.map(p => `<tr><td>${p.pid}</td><td>${p.user}</td><td>${p.cpu}</td><td>${p.mem}</td><td class="process-cmd">${p.command}</td><td><button class="btn-kill-pid" onclick="killProcess(${p.pid})">kill</button></td></tr>`).join('') +
+                      '</tbody></table>'
+                    : '<div class="server-loading">No processes</div>';
+            }
+        })
+        .catch(() => {});
+}
+
+function refreshServerStats() {
+    ['serverTechs','processTable'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="server-loading">Loading…</div>';
+    });
+    loadServerStats();
+}
+
+function killProcess(pid) {
+    if (!confirm('Kill process ' + pid + '?')) return;
+    fetch('?action=kill-pid&pid=' + pid)
+        .then(r => r.json())
+        .then(d => {
+            showNotification(d.message || 'Done', d.success ? 'success' : 'error');
+            if (d.success) setTimeout(refreshServerStats, 1000);
+        })
+        .catch(() => showNotification('Error', 'error'));
+}
+
+function autodetectProjects(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+    fetch('?action=autodetect-projects')
+        .then(r => r.json())
+        .then(d => {
+            if (d.detected && d.detected.length > 0) {
+                showNotification('Detected ' + d.count + ' project(s): ' + d.detected.join(', '), 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showNotification('No new projects found', 'success');
+            }
+        })
+        .catch(() => showNotification('Scan error', 'error'))
+        .finally(() => { if (btn) { btn.disabled = false; btn.textContent = '⊕ Scan'; } });
+}
+
 // ─── Initialization ───────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -468,6 +573,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .catch(() => {});
         }, 30000);
+    }
+
+    // Server panel auto-load & refresh
+    if (document.getElementById('serverPanel')) {
+        loadServerStats();
+        setInterval(loadServerStats, 15000);
     }
 
     // Keyboard shortcuts

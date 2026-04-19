@@ -1,0 +1,7 @@
+Kill puerto 8080
+
+lsof -ti :8080 2>/dev/null) 2>/dev/null; sleep 1; ss -tlnp | grep 8080 || echo "puerto 8080 libre
+
+- Mejorar la opción de kill un puerto desde el botón "Ports" pues no funciona bien.
+
+- El stop de calibre debe de hacerse similar al start usando sudo.

@@ -1,0 +1,15 @@
+[Actualización de todos los repos]: Deseo que hagas un commit + push en cada uno de los repositorios que aparece en cada proyecto aquí presente, sí hay algún cambio pendiente a ser commiteado, en los subdirectorios correspondientes (cada subcarpeta contiene una carpeta .git). El usuario de github es: patchamama.go@gmail.com y la contraseña o token es: 
+
+- Crear instalador visual y por línea de comando que permita crear un proyecto desde cero, tipo claude chat, listo para el deployment mientras se va creando, y también desde línea de comando.
+
+- Posibilidad de importar un repositorio github y que automáticamente se cree el archivo de configuración .project-app.json adaptado a la tecnología del framework importado (el script detectaría por lo requeriments la tecnología y configuraría todo el proyecto). De ser necesario crearía el venv de python e instalaría las dependencias, crearía la bds e importaría las migraciones, crearía variables de entorno o archivos de configuración .env, env.py,... También haría los npm install sí es un proyecto react, vite, node y ejecutaría el npm run dev o npm start, dependiendo del proyecto. Haría lo mismo sí es una aplicación java springboot, php laravel con compose...
+
+
+- Arreglar iconos github y TODO del menú
+
+- Poner un buscador en la barra de inicio para buscar proyectos por nombre, tecnología,... 
+
+- Agregar un favicon a la aplicación acorde a su idea de hacer deployments
+
+- Pone en cada aplicación, un enlace para abrir la base de datos (pgMyadmin o phpMySQL) sí se definiera la URL en la app para ello en el archivo .config-app.json
+
