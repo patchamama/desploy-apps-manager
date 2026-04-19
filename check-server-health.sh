@@ -1,63 +1,91 @@
 #!/usr/bin/env bash
 
-# Color codes for better readability
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Archivo de salida
+REPORT_FILE="report-systems.txt"
 
-echo -e "${BLUE}=== MONITOR DE SALUD DEL SERVIDOR (UBC & ARCHIVOS) ===${NC}"
-echo -e "Fecha: $(date)"
-echo ""
+# Redirigir toda la salida a pantalla y al archivo
+# (Usamos un bloque para capturar todo el script)
+{
+    # Color codes for better readability
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m' # No Color
 
-# 1. Intentar leer User Beancounters (requiere sudo)
-echo -e "${YELLOW}[1] Verificando límites de Kernel (UBC)...${NC}"
-if sudo [ -f /proc/user_beancounters ]; then
-    echo -e "Analizando dcachesize y kmemsize (buscando fallos)..."
-    # Mostrar cabecera y las líneas de interés
-    sudo cat /proc/user_beancounters | grep -E 'resource|dcachesize|kmemsize' | awk '{printf "%-15s %-10s %-10s %-10s %-10s %-10s\n", $1, $2, $3, $4, $5, $6}'
-    
-    # Verificar si hubo fallos recientemente (columna failcnt, que es la última NF)
-    fails=$(sudo cat /proc/user_beancounters | grep -E 'dcachesize|kmemsize' | awk '{sum+=$NF} END {print sum}')
-    
-    if [[ "$fails" =~ ^[0-9]+$ ]] && [ "$fails" -gt 0 ]; then
-        echo -e "${RED}⚠️ ¡ALERTA! Se detectaron $fails fallos en los límites del kernel.${NC}"
-        echo -e "Esto significa que el servidor bloqueó acciones por falta de memoria de gestión.${NC}"
+    echo -e "${BLUE}=== MONITOR DE SALUD DEL SERVIDOR (UBC & ARCHIVOS) ===${NC}"
+    echo -e "Fecha: $(date)"
+    echo ""
+
+    # 1. Intentar leer User Beancounters (requiere sudo)
+    echo -e "${YELLOW}[1] Verificando límites de Kernel (UBC)...${NC}"
+    if sudo [ -f /proc/user_beancounters ]; then
+        echo -e "Analizando dcachesize y kmemsize (buscando fallos)..."
+        
+        # Cabecera de la tabla
+        printf "${YELLOW}%-15s %-12s %-12s %-15s %-10s %-8s${NC}\n" "RECURSO" "HELD" "MAXHELD" "LIMIT" "FAILCNT" "% USO"
+        
+        # Procesar datos con AWK
+        sudo cat /proc/user_beancounters | grep -E 'dcachesize|kmemsize' | awk '
+        {
+            if ($1 ~ /:$/) { res=$2; hld=$3; max=$4; lim=$6; fail=$7 }
+            else { res=$1; hld=$2; max=$3; lim=$5; fail=$6 }
+            
+            pct = 0
+            if (lim > 0 && lim != "9223372036854775807") {
+                pct = (hld / lim) * 100
+            }
+            
+            color="\033[0m"
+            if (pct > 90 || (fail != "" && fail > 0)) color="\033[0;31m"
+            else if (pct > 70) color="\033[1;33m"
+            else if (pct > 0) color="\033[0;32m"
+
+            printf "%b%-15s %-12s %-12s %-15s %-10s %-8.2f%%\033[0m\n", color, res, hld, max, lim, fail, pct
+        }'
+        
+        fails=$(sudo cat /proc/user_beancounters | grep -E 'dcachesize|kmemsize' | awk '{if ($1 ~ /:$/) f=$7; else f=$6; sum+=f} END {print sum}')
+        
+        if [[ "$fails" =~ ^[0-9]+$ ]] && [ "$fails" -gt 0 ]; then
+            echo -e "${RED}⚠️ ¡ALERTA! Se detectaron $fails fallos en los límites del kernel.${NC}"
+        else
+            echo -e "${GREEN}✅ No se detectan fallos (failcnt = 0) en el kernel.${NC}"
+        fi
     else
-        echo -e "${GREEN}✅ No se detectan fallos (failcnt = 0) en el kernel.${NC}"
+        echo -e "${RED}❌ No se pudo leer /proc/user_beancounters.${NC}"
     fi
-else
-    echo -e "${RED}❌ No se pudo leer /proc/user_beancounters (incluso con sudo).${NC}"
-    echo "Es posible que el entorno de virtualización oculte estos datos por completo."
+
+    echo ""
+
+    # 2. Censo total de archivos
+    echo -e "${YELLOW}[2] Censo de archivos en el proyecto actual...${NC}"
+    total_files=$(find . -type f 2>/dev/null | wc -l)
+    echo -e "Total: $total_files archivos."
+
+    echo ""
+
+    # 3. Top 10 directorios con más archivos
+    echo -e "${YELLOW}[3] Top 10 carpetas con más archivos (intensivas en dcachesize):${NC}"
+    {
+        find . -maxdepth 2 -type d -not -path '*/.*' -not -path '.' 2>/dev/null
+        find / -maxdepth 1 -type d -not -path '/proc*' -not -path '/sys*' -not -path '/dev*' -not -path '/run*' -not -path '/.*' -not -path '/' 2>/dev/null
+    } | sort -u | while read dir; do
+        count=$(sudo find "$dir" -type f 2>/dev/null | wc -l)
+        [ "$count" -gt 100 ] && echo -e "$count\t$dir"
+    done | sort -rn | head -n 10 | awk '{printf "%-10s %-s\n", $1, $2}'
+
+    echo ""
+    echo -e "${BLUE}======================================================${NC}"
+    echo "Reporte generado en: $REPORT_FILE"
+
+} | tee "$REPORT_FILE"
+
+# Instrucciones para el CRON (Solo se muestran si se corre manualmente)
+if [ -t 0 ]; then
+    echo ""
+    echo -e "${YELLOW}>>> CÓMO AGREGAR ESTO AL CRON (Ejecutar cada 10 min):${NC}"
+    echo "1. Ejecutá: crontab -e"
+    echo "2. Pegá esta línea al final (usando la ruta absoluta):"
+    echo "*/10 * * * * cd $(pwd) && bash check-server-health.sh > /dev/null 2>&1"
+    echo "------------------------------------------------------"
 fi
-
-echo ""
-
-# 2. Censo total de archivos
-echo -e "${YELLOW}[2] Censo de archivos en el proyecto actual...${NC}"
-total_files=$(find . -type f 2>/dev/null | wc -l)
-
-if [ "$total_files" -gt 50000 ]; then
-    echo -e "${RED}⚠️ PELIGRO: Tenés $total_files archivos.${NC}"
-    echo "Estás por encima del límite recomendado (50k). El servidor podría volverse inestable."
-elif [ "$total_files" -gt 30000 ]; then
-    echo -e "${YELLOW}⚠️ ADVERTENCIA: Tenés $total_files archivos.${NC}"
-    echo "Estás en la zona amarilla. Considerá limpiar carpetas node_modules o temporales."
-else
-    echo -e "${GREEN}✅ Tenés $total_files archivos en total. Todo bajo control.${NC}"
-fi
-
-echo ""
-
-# 3. Top 10 directorios con más archivos
-echo -e "${YELLOW}[3] Top 10 carpetas con más archivos (intensivas en dcachesize):${NC}"
-echo "Calculando (esto puede tardar unos segundos)..."
-find . -maxdepth 2 -type d -not -path '*/.*' -not -path '.' 2>/dev/null | while read dir; do
-    count=$(find "$dir" -type f 2>/dev/null | wc -l)
-    echo -e "$count\t$dir"
-done | sort -rn | head -n 10 | awk '{printf "%-10s %-s\n", $1, $2}'
-
-echo ""
-echo -e "${BLUE}======================================================${NC}"
-echo "Consejo: Si ves una carpeta con > 10,000 archivos, revisá si es necesaria."
