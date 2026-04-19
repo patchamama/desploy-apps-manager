@@ -23,25 +23,31 @@ REPORT_FILE="report-systems.txt"
         echo -e "Analizando dcachesize y kmemsize (buscando fallos)..."
         
         # Cabecera de la tabla
-        printf "${YELLOW}%-15s %-12s %-12s %-15s %-10s %-8s${NC}\n" "RECURSO" "HELD" "MAXHELD" "LIMIT" "FAILCNT" "% USO"
+        printf "${YELLOW}%-15s %-12s %-12s %-15s %-10s %-8s${NC}\n" "RECURSO" "HELD" "MAXHELD" "BARRIER" "FAILCNT" "% USO"
         
         # Procesar datos con AWK
         sudo cat /proc/user_beancounters | grep -E 'dcachesize|kmemsize' | awk '
         {
-            if ($1 ~ /:$/) { res=$2; hld=$3; max=$4; lim=$6; fail=$7 }
-            else { res=$1; hld=$2; max=$3; lim=$5; fail=$6 }
+            # Detectar si hay UID o no para asignar columnas
+            if ($1 ~ /:$/) { res=$2; hld=$3; max=$4; bar=$5; lim=$6; fail=$7 }
+            else { res=$1; hld=$2; max=$3; bar=$4; lim=$5; fail=$6 }
+            
+            # Usar barrier para el cálculo si el limit es infinito
+            divisor = (lim == "9223372036854775807") ? bar : lim
             
             pct = 0
-            if (lim > 0 && lim != "9223372036854775807") {
-                pct = (hld / lim) * 100
+            if (divisor > 0 && divisor != "9223372036854775807") {
+                pct = (hld / divisor) * 100
             }
             
+            # Definir colores segun uso o fallos
             color="\033[0m"
             if (pct > 90 || (fail != "" && fail > 0)) color="\033[0;31m"
             else if (pct > 70) color="\033[1;33m"
             else if (pct > 0) color="\033[0;32m"
 
-            printf "%b%-15s %-12s %-12s %-15s %-10s %-8.2f%%\033[0m\n", color, res, hld, max, lim, fail, pct
+            # Formatear salida (usando %s para el color)
+            printf "%s%-15s %-12s %-12s %-15s %-10s %-8.2f%%\033[0m\n", color, res, hld, max, bar, fail, pct
         }'
         
         fails=$(sudo cat /proc/user_beancounters | grep -E 'dcachesize|kmemsize' | awk '{if ($1 ~ /:$/) f=$7; else f=$6; sum+=f} END {print sum}')
@@ -61,18 +67,6 @@ REPORT_FILE="report-systems.txt"
     echo -e "${YELLOW}[2] Censo de archivos en el proyecto actual...${NC}"
     total_files=$(find . -type f 2>/dev/null | wc -l)
     echo -e "Total: $total_files archivos."
-
-    echo ""
-
-    # 3. Top 10 directorios con más archivos
-    echo -e "${YELLOW}[3] Top 10 carpetas con más archivos (intensivas en dcachesize):${NC}"
-    {
-        find . -maxdepth 2 -type d -not -path '*/.*' -not -path '.' 2>/dev/null
-        find / -maxdepth 1 -type d -not -path '/proc*' -not -path '/sys*' -not -path '/dev*' -not -path '/run*' -not -path '/.*' -not -path '/' 2>/dev/null
-    } | sort -u | while read dir; do
-        count=$(sudo find "$dir" -type f 2>/dev/null | wc -l)
-        [ "$count" -gt 100 ] && echo -e "$count\t$dir"
-    done | sort -rn | head -n 10 | awk '{printf "%-10s %-s\n", $1, $2}'
 
     echo ""
     echo -e "${BLUE}======================================================${NC}"

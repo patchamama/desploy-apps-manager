@@ -18,6 +18,13 @@ if [ ! -f "$SCRIPT_PATH" ]; then
     exit 1
 fi
 
+echo -e "\033[0;34m[0/4] Limpiando instalaciones previas...\033[0m"
+systemctl stop $SERVICE_NAME.timer 2>/dev/null
+systemctl stop $SERVICE_NAME.service 2>/dev/null
+systemctl disable $SERVICE_NAME.timer 2>/dev/null
+rm -f /etc/systemd/system/$SERVICE_NAME.service /etc/systemd/system/$SERVICE_NAME.timer
+systemctl daemon-reload
+
 echo -e "\033[0;34m[1/4] Creando archivo de servicio...\033[0m"
 cat <<EOF > /etc/systemd/system/$SERVICE_NAME.service
 [Unit]
