@@ -2,6 +2,7 @@
 let _sudoButton = null;
 let currentTodoProject = null;
 let originalTodoContent = '';
+let _serverTechs = [];
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -544,11 +545,13 @@ function loadServerStats() {
             }
 
             // Tech chips
+            _serverTechs = d.techs || [];
             const techsEl = el('serverTechs');
             if (techsEl) {
-                techsEl.innerHTML = d.techs && d.techs.length
-                    ? d.techs.map(t => `<div class="tech-chip"><strong>${t.name}</strong>&nbsp;<span>${t.version}</span></div>`).join('')
+                techsEl.innerHTML = _serverTechs.length
+                    ? _serverTechs.map(t => _renderTechChip(t, null)).join('')
                     : '<span class="server-loading">—</span>';
+                _fetchLatestVersions();
             }
 
             // Docker
@@ -579,6 +582,52 @@ function refreshServerStats() {
         if (el) el.innerHTML = '<div class="server-loading">Loading…</div>';
     });
     loadServerStats();
+}
+
+function _renderTechChip(t, latestMap) {
+    const latest = latestMap ? (latestMap[t.name] || null) : null;
+    const isOutdated = latest && t.version && t.version !== '?' &&
+        (function() {
+            try { return latest.localeCompare(t.version, undefined, {numeric:true, sensitivity:'base'}) > 0; }
+            catch(e) { return latest !== t.version; }
+        })();
+    const nameEsc = (t.name || '').replace(/'/g, "\\'");
+    const verEsc  = (t.version || '').replace(/'/g, "\\'");
+    const latEsc  = (latest || '').replace(/'/g, "\\'");
+    const cmdEsc  = (t.upgrade_cmd || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const badge = isOutdated
+        ? `<button class="tech-outdated-btn" onclick="openTechUpgradeModal('${nameEsc}','${verEsc}','${latEsc}','${cmdEsc}')" title="Actualizar a ${latest}">✱</button>`
+        : '';
+    return `<div class="tech-chip${isOutdated ? ' tech-outdated' : ''}"><strong>${t.name}</strong>&nbsp;<span>${t.version}</span>${badge}</div>`;
+}
+
+function _fetchLatestVersions() {
+    fetch('?action=latest-versions')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success || !d.versions) return;
+            const techsEl = document.getElementById('serverTechs');
+            if (!techsEl || !_serverTechs.length) return;
+            techsEl.innerHTML = _serverTechs.map(t => _renderTechChip(t, d.versions)).join('');
+        })
+        .catch(() => {});
+}
+
+function openTechUpgradeModal(name, installed, latest, upgradeCmd) {
+    document.getElementById('techUpgradeName').textContent = name;
+    document.getElementById('techCurrentVersion').textContent = installed;
+    document.getElementById('techLatestVersion').textContent = latest;
+    document.getElementById('techUpgradeCommand').textContent = upgradeCmd;
+    document.getElementById('techUpgradeModal').style.display = 'flex';
+}
+
+function closeTechUpgradeModal() {
+    document.getElementById('techUpgradeModal').style.display = 'none';
+}
+
+function copyUpgradeCommand() {
+    const cmd = document.getElementById('techUpgradeCommand').textContent;
+    navigator.clipboard.writeText(cmd).then(() => showNotification('Comando copiado', 'success')).catch(() => {});
 }
 
 function killProcess(pid) {

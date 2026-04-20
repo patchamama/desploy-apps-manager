@@ -1671,6 +1671,157 @@ if (isset($_GET['action']) && $_GET['action'] === 'server-stats' && isAuthentica
     exit;
 }
 
+// Helper: HTTP GET with timeout
+function fetchUrl($url, $timeout = 6) {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_USERAGENT      => 'patchamama-dashboard/1.0',
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+        ]);
+        $r = curl_exec($ch);
+        curl_close($ch);
+        return $r ?: null;
+    }
+    $ctx = stream_context_create(['http' => ['timeout' => $timeout, 'user_agent' => 'patchamama-dashboard/1.0']]);
+    return @file_get_contents($url, false, $ctx) ?: null;
+}
+
+// Helper: fetch latest from endoflife.date
+function eolLatest($product) {
+    $raw = fetchUrl("https://endoflife.date/api/$product.json");
+    if (!$raw) return null;
+    $arr = json_decode($raw, true);
+    return is_array($arr) && !empty($arr) ? ($arr[0]['latest'] ?? null) : null;
+}
+
+// Fetch real latest versions from public APIs (cached 1h)
+function fetchLatestVersionsFromInternet() {
+    $v = [];
+
+    // PHP
+    $raw = fetchUrl('https://www.php.net/releases/active.php');
+    if ($raw) {
+        $arr = json_decode($raw, true);
+        $max = '0';
+        if (is_array($arr)) {
+            foreach ($arr as $info) {
+                $ver = $info['version'] ?? '';
+                if ($ver && version_compare($ver, $max, '>')) $max = $ver;
+            }
+        }
+        $v['PHP'] = $max !== '0' ? $max : null;
+    }
+    if (empty($v['PHP'])) $v['PHP'] = eolLatest('php');
+
+    // Python
+    $v['Python'] = eolLatest('python');
+
+    // Node.js
+    $v['Node.js'] = eolLatest('nodejs');
+
+    // Go
+    $raw = fetchUrl('https://go.dev/VERSION?m=text');
+    if ($raw) {
+        preg_match('/go([\d.]+)/', trim($raw), $m);
+        $v['Go'] = $m[1] ?? null;
+    }
+
+    // Java
+    $v['Java'] = eolLatest('java');
+
+    // MySQL
+    $v['MySQL'] = eolLatest('mysql');
+
+    // PostgreSQL
+    $v['PostgreSQL'] = eolLatest('postgresql');
+
+    // SQLite (no public API, hardcode)
+    $v['SQLite'] = '3.47.2';
+
+    // Docker
+    $v['Docker'] = eolLatest('docker-engine');
+
+    // Git
+    $v['Git'] = eolLatest('git');
+
+    // Apache
+    $v['Apache'] = eolLatest('apache-http-server');
+
+    // Redis
+    $v['Redis'] = eolLatest('redis');
+
+    // Rust
+    $raw = fetchUrl('https://api.github.com/repos/rust-lang/rust/releases/latest');
+    if ($raw) {
+        $r = json_decode($raw, true);
+        $tag = $r['tag_name'] ?? '';
+        if (preg_match('/[\d.]+/', $tag, $m)) $v['Rust'] = $m[0];
+    }
+
+    // Ruby
+    $v['Ruby'] = eolLatest('ruby');
+
+    // npm
+    $raw = fetchUrl('https://registry.npmjs.org/npm/latest');
+    if ($raw) {
+        $r = json_decode($raw, true);
+        $v['npm'] = $r['version'] ?? null;
+    }
+
+    // pnpm
+    $raw = fetchUrl('https://registry.npmjs.org/pnpm/latest');
+    if ($raw) {
+        $r = json_decode($raw, true);
+        $v['pnpm'] = $r['version'] ?? null;
+    }
+
+    // Bun
+    $raw = fetchUrl('https://api.github.com/repos/oven-sh/bun/releases/latest');
+    if ($raw) {
+        $r = json_decode($raw, true);
+        $tag = ltrim($r['tag_name'] ?? '', 'bun-v');
+        if (preg_match('/[\d.]+/', $tag, $m)) $v['Bun'] = $m[0];
+    }
+
+    // Deno
+    $raw = fetchUrl('https://api.github.com/repos/denoland/deno/releases/latest');
+    if ($raw) {
+        $r = json_decode($raw, true);
+        $tag = ltrim($r['tag_name'] ?? '', 'v');
+        if (preg_match('/[\d.]+/', $tag, $m)) $v['Deno'] = $m[0];
+    }
+
+    return array_filter($v);
+}
+
+// API: Get latest versions (async - cached for 1 hour)
+if (isset($_GET['action']) && $_GET['action'] === 'latest-versions' && isAuthenticated()) {
+    header('Content-Type: application/json');
+    $cacheFile = __DIR__ . '/.logs/latest-versions-cache.json';
+    $cacheTime = 3600;
+
+    if (file_exists($cacheFile)) {
+        $cacheData = json_decode(file_get_contents($cacheFile), true);
+        if ($cacheData && (time() - ($cacheData['timestamp'] ?? 0)) < $cacheTime) {
+            echo json_encode(['success' => true, 'versions' => $cacheData['versions'], 'cached' => true]);
+            exit;
+        }
+    }
+
+    $versions = fetchLatestVersionsFromInternet();
+
+    $cacheDir = __DIR__ . '/.logs';
+    if (!is_dir($cacheDir)) mkdir($cacheDir, 0755, true);
+    file_put_contents($cacheFile, json_encode(['timestamp' => time(), 'versions' => $versions]));
+
+    echo json_encode(['success' => true, 'versions' => $versions, 'cached' => false]);
+    exit;
+}
+
 // API: Kill process by PID
 if (isset($_GET['action']) && $_GET['action'] === 'kill-pid' && isAuthenticated()) {
     header('Content-Type: application/json');
@@ -1803,7 +1954,28 @@ function getServerStats() {
         if (count($p) >= 11) $processes[] = ['user' => $p[0], 'pid' => $p[1], 'cpu' => $p[2], 'mem' => $p[3], 'command' => mb_strimwidth($p[10], 0, 80, '…')];
     }
 
-    // Technologies
+    // Technologies - Latest stable versions (April 2026)
+    $latestVersions = [
+        'PHP'        => '8.5.4',
+        'Python'     => '3.14.4',
+        'Node.js'    => '25.9.0',
+        'Go'         => '1.24.0',
+        'Java'       => '26',
+        'MySQL'      => '9.6.0',
+        'PostgreSQL' => '17.2',
+        'SQLite'     => '3.53.0',
+        'Docker'     => '29.4.0',
+        'Git'        => '2.53.0',
+        'Apache'     => '2.4.66',
+        'Redis'      => '7.4.2',
+        'Rust'       => '1.86.0',
+        'Ruby'       => '4.0.2',
+        'npm'        => '11.11.0',
+        'pnpm'       => '10.33.0',
+        'Bun'        => '1.3.12',
+        'Deno'       => '2.7.10',
+    ];
+
     $techChecks = [
         'PHP'        => 'php -r "echo PHP_VERSION;" 2>/dev/null',
         'Python'     => 'python3 --version 2>/dev/null',
@@ -1812,18 +1984,57 @@ function getServerStats() {
         'Java'       => 'java -version 2>&1 | head -1',
         'MySQL'      => 'mysql --version 2>/dev/null',
         'PostgreSQL' => 'psql --version 2>/dev/null',
+        'SQLite'     => 'sqlite3 --version 2>/dev/null',
         'Docker'     => 'docker --version 2>/dev/null',
         'Git'        => 'git --version 2>/dev/null',
-        'Nginx'      => 'nginx -v 2>&1',
         'Apache'     => 'apache2 -v 2>&1 | head -1',
         'Redis'      => 'redis-server --version 2>/dev/null',
+        'Rust'       => 'rustc --version 2>/dev/null',
+        'Ruby'       => 'ruby --version 2>/dev/null',
+        'npm'        => 'npm --version 2>/dev/null',
+        'pnpm'       => 'pnpm --version 2>/dev/null',
+        'Bun'        => 'bun --version 2>/dev/null',
+        'Deno'       => 'deno --version 2>/dev/null',
     ];
+
+    $upgradeCommands = [
+        'PHP'        => 'sudo add-apt-repository ppa:ondrej/php && sudo apt update && sudo apt install php',
+        'Python'     => 'sudo apt install python3.14',
+        'Node.js'    => 'curl -fsSL https://deb.nodesource.com/setup_25.x | sudo -E bash - && sudo apt install -y nodejs',
+        'Go'         => 'cd /tmp && wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz && sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz',
+        'Java'       => 'sudo apt install openjdk-26-jdk',
+        'MySQL'      => 'sudo apt install mysql-server',
+        'PostgreSQL' => 'sudo apt install postgresql-17',
+        'SQLite'     => 'sudo apt install sqlite3',
+        'Docker'     => 'sudo apt install docker-ce docker-ce-cli containerd.io',
+        'Git'        => 'sudo add-apt-repository ppa:git-core/ppa && sudo apt update && sudo apt install git',
+        'Apache'     => 'sudo apt install apache2',
+        'Redis'      => 'sudo apt install redis-server',
+        'Rust'       => 'curl --proto \'=https\' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && rustup update',
+        'Ruby'       => 'sudo apt install ruby-full',
+        'npm'        => 'sudo npm install -g npm@latest',
+        'pnpm'       => 'curl -fsSL https://get.pnpm.io/install.sh | sh -',
+        'Bun'        => 'bun upgrade',
+        'Deno'       => 'deno upgrade',
+    ];
+
     $techs = [];
     foreach ($techChecks as $name => $cmd) {
         $out = trim(shell_exec($cmd) ?: '');
         if (!empty($out)) {
             preg_match('/\d+\.\d+\.?\d*/u', $out, $vm);
-            $techs[] = ['name' => $name, 'version' => $vm[0] ?? '?'];
+            $installedVersion = $vm[0] ?? '?';
+            $latestVersion = $latestVersions[$name] ?? null;
+            $isOutdated = $latestVersion && version_compare($installedVersion, $latestVersion, '<');
+            $upgradeCmd = $upgradeCommands[$name] ?? '';
+
+            $techs[] = [
+                'name'         => $name,
+                'version'      => $installedVersion,
+                'latest'       => $latestVersion,
+                'outdated'     => $isOutdated,
+                'upgrade_cmd'  => $upgradeCmd
+            ];
         }
     }
     // NVIDIA GPU
@@ -2345,6 +2556,36 @@ $currentLang = getCurrentLanguage();
                             <polygon points="5 3 19 12 5 21 5 3"/>
                         </svg>
                         <?php echo __('sudo_confirm'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tech Upgrade Modal -->
+        <div id="techUpgradeModal" class="modal">
+            <div class="modal-content modal-sm">
+                <div class="modal-header">
+                    <h3>Actualizar <span id="techUpgradeName"></span></h3>
+                    <button class="modal-close" onclick="closeTechUpgradeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-label">Versión actual: <strong id="techCurrentVersion"></strong></p>
+                    <p class="modal-label">Última versión: <strong id="techLatestVersion"></strong></p>
+                    <hr style="margin: 15px 0; border: none; border-top: 1px solid var(--border);">
+                    <p class="modal-label">Comando para actualizar:</p>
+                    <pre id="techUpgradeCommand" class="upgrade-command"></pre>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+                        💡 Copiá el comando y ejecutalo en tu terminal
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-action" onclick="closeTechUpgradeModal()">Cerrar</button>
+                    <button class="btn-action btn-primary" onclick="copyUpgradeCommand()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        Copiar comando
                     </button>
                 </div>
             </div>
