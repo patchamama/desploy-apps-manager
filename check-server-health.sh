@@ -62,7 +62,7 @@ REPORT_FILE="report-systems.txt"
             printf "%s%-15s %-10s %-10s %-10s %-10s %-8s\033[0m\n", color, res, f_hld, f_max, f_lim, fail, (pct > 0 ? sprintf("%.2f%%", pct) : "---")
         }'
         
-        fails=$(sudo cat /proc/user_beancounters | awk '\''{f=($1 ~ /:$/ ? $7 : $6); sum+=f} END {print sum}'\'')
+        fails=$(sudo cat /proc/user_beancounters | awk '{f=($1 ~ /:$/ ? $7 : $6); sum+=f} END {print sum}')
         
         if [[ "$fails" =~ ^[0-9]+$ ]] && [ "$fails" -gt 0 ]; then
             echo -e "${RED}⚠️ ¡ALERTA! Se detectaron $fails fallos en los límites del kernel.${NC}"
