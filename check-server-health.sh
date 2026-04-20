@@ -43,7 +43,7 @@ REPORT_FILE="report-systems.txt"
             is_b = (res ~ /size|buf|pages/)
             
             # Divisor para el porcentaje
-            div = (lim == "9223372036854775807") ? bar : lim
+            div = (lim == "9223372036854775807") ? max : lim
             pct = 0
             if (div > 0 && div != "9223372036854775807") {
                 pct = (hld / div) * 100
