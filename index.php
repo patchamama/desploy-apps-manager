@@ -1728,6 +1728,42 @@ if (isAuthenticated()) {
 
 // ─── Server Stats helpers ──────────────────────────────────────────────────────
 
+function parseSystemReport() {
+    $reportFile = __DIR__ . '/report-systems.txt';
+    if (!is_readable($reportFile)) return null;
+    $raw = file_get_contents($reportFile);
+    if (!$raw) return null;
+
+    // Strip ANSI color codes
+    $text = preg_replace('/\x1b\[[0-9;]*m/', '', $raw);
+
+    // Date
+    $date = '';
+    if (preg_match('/^Fecha:\s*(.+)$/m', $text, $m)) $date = trim($m[1]);
+
+    // UBC resource lines: NAME  HELD  MAXHELD  LIMIT  FAIL  % USO
+    $resources = [];
+    preg_match_all('/^(\w+)\s+([\d.]+[KMGTP]?)\s+([\d.]+[KMGTP]?)\s+(\S+)\s+(\d+)\s+([\d.]+)%/m', $text, $ms, PREG_SET_ORDER);
+    foreach ($ms as $m) {
+        $resources[] = [
+            'name'    => $m[1],
+            'held'    => $m[2],
+            'maxheld' => $m[3],
+            'limit'   => $m[4],
+            'fail'    => (int)$m[5],
+            'pct'     => (float)$m[6],
+        ];
+    }
+
+    // File census
+    $fileCount = null;
+    if (preg_match('/Total:\s*(\d+)\s*archivos/i', $text, $m)) $fileCount = (int)$m[1];
+
+    $hasFail = !empty(array_filter($resources, fn($r) => $r['fail'] > 0));
+
+    return ['date' => $date, 'resources' => $resources, 'file_count' => $fileCount, 'has_fail' => $hasFail];
+}
+
 function getServerStats() {
     // RAM — via `free -b` (open_basedir blocks file('/proc/meminfo'))
     $ramTotal = $ramUsed = 0;
@@ -1804,7 +1840,7 @@ function getServerStats() {
         }
     }
 
-    return ['ram' => ['total' => $ramTotal, 'used' => $ramUsed], 'disk' => ['total' => $diskTotal, 'used' => $diskUsed], 'inodes' => ['total' => $inodesTotal, 'used' => $inodesUsed], 'processes' => $processes, 'techs' => $techs, 'docker' => $docker];
+    return ['ram' => ['total' => $ramTotal, 'used' => $ramUsed], 'disk' => ['total' => $diskTotal, 'used' => $diskUsed], 'inodes' => ['total' => $inodesTotal, 'used' => $inodesUsed], 'processes' => $processes, 'techs' => $techs, 'docker' => $docker, 'ubc' => parseSystemReport()];
 }
 
 // ─── Auto-detect project technology ───────────────────────────────────────────
@@ -2339,6 +2375,14 @@ $currentLang = getCurrentLanguage();
                     <div class="metric-bar-wrap"><div class="metric-bar-fill" id="inodesFill"></div></div>
                     <span class="metric-stat" id="inodesStat">—</span>
                 </div>
+            </div>
+
+            <div id="ubcSection" style="display:none; margin-bottom: 20px;">
+                <div class="server-proc-header">
+                    <h3 id="ubcTitle">Kernel Resources (UBC)</h3>
+                    <small id="ubcDateHint">auto-refresh 10m</small>
+                </div>
+                <div id="ubcTable"></div>
             </div>
 
             <div class="server-tech-grid" id="serverTechs">

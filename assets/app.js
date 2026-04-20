@@ -479,14 +479,69 @@ function loadServerStats() {
         .then(d => {
             if (!d.success) return;
 
+            const el = id => document.getElementById(id);
+            const _applyStatColor = (id, pct) => {
+                const element = el(id);
+                if (!element) return;
+                element.style.color = pct > 90 ? 'var(--error-color)' : (pct > 70 ? '#f59e0b' : 'var(--success-color)');
+                element.style.fontWeight = 'bold';
+            };
+
             // Metrics
             const ramPct = _setBar('ramFill', '', d.ram.used, d.ram.total);
-            const el = id => document.getElementById(id);
-            if (el('ramStat'))    el('ramStat').textContent    = _fmtBytes(d.ram.used) + ' / ' + _fmtBytes(d.ram.total) + ' (' + ramPct + '%)';
+            if (el('ramStat')) {
+                el('ramStat').textContent = _fmtBytes(d.ram.used) + ' / ' + _fmtBytes(d.ram.total) + ' (' + ramPct + '%)';
+                _applyStatColor('ramStat', ramPct);
+            }
+
             const diskPct = _setBar('diskFill', '', d.disk.used, d.disk.total);
-            if (el('diskStat'))   el('diskStat').textContent   = _fmtBytes(d.disk.used) + ' / ' + _fmtBytes(d.disk.total) + ' (' + diskPct + '%)';
+            if (el('diskStat')) {
+                el('diskStat').textContent = _fmtBytes(d.disk.used) + ' / ' + _fmtBytes(d.disk.total) + ' (' + diskPct + '%)';
+                _applyStatColor('diskStat', diskPct);
+            }
+
             const inPct = _setBar('inodesFill', '', d.inodes.used, d.inodes.total);
-            if (el('inodesStat')) el('inodesStat').textContent = _fmtCount(d.inodes.used) + ' / ' + _fmtCount(d.inodes.total) + ' (' + inPct + '%)';
+            if (el('inodesStat')) {
+                el('inodesStat').textContent = _fmtCount(d.inodes.used) + ' / ' + _fmtCount(d.inodes.total) + ' (' + inPct + '%)';
+                _applyStatColor('inodesStat', inPct);
+            }
+
+            // UBC Section
+            const ubcSection = el('ubcSection');
+            const ubcTable = el('ubcTable');
+            if (ubcSection && ubcTable && d.ubc && d.ubc.resources && d.ubc.resources.length > 0) {
+                ubcSection.style.display = 'block';
+                const dateHint = el('ubcDateHint');
+                if (dateHint) dateHint.textContent = d.ubc.date || 'auto-refresh 10m';
+                
+                const ubcTitle = el('ubcTitle');
+                if (ubcTitle) {
+                    ubcTitle.style.color = d.ubc.has_fail ? 'var(--error-color)' : 'var(--text-secondary)';
+                    if (d.ubc.has_fail) ubcTitle.innerHTML = 'Kernel Resources (UBC) <span style="font-size:0.7em; background:var(--error-color); color:white; padding:2px 6px; border-radius:4px; margin-left:8px;">FAILURES DETECTED</span>';
+                    else ubcTitle.textContent = 'Kernel Resources (UBC)';
+                }
+
+                let html = '<table class="process-table"><thead><tr><th>Resource</th><th>Held</th><th>Max</th><th>Limit</th><th>Fail</th><th>%</th></tr></thead><tbody>';
+                d.ubc.resources.forEach(r => {
+                    const failClass = r.fail > 0 ? 'color: var(--error-color); font-weight: bold;' : '';
+                    // Semaphore colors: Red (>90), Yellow (>70), Green (Good)
+                    const pctColor = r.pct > 90 ? 'var(--error-color)' : (r.pct > 70 ? '#f59e0b' : 'var(--success-color)');
+                    const pctStyle = `color: ${pctColor}; font-weight: bold;`;
+                    
+                    html += `<tr>
+                        <td style="${failClass}">${r.name}</td>
+                        <td>${r.held}</td>
+                        <td>${r.maxheld}</td>
+                        <td>${r.limit}</td>
+                        <td style="${failClass}">${r.fail}</td>
+                        <td style="${pctStyle}">${r.pct}%</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                ubcTable.innerHTML = html;
+            } else if (ubcSection) {
+                ubcSection.style.display = 'none';
+            }
 
             // Tech chips
             const techsEl = el('serverTechs');
